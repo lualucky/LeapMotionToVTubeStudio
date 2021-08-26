@@ -9,6 +9,10 @@
 /[Bb]uilds/
 /[Ll]ogs/
 /[Mm]emoryCaptures/
+/[Aa]ssets/[Pp]lugins/[Ll]eapMotion/[Cc]ore/[Ee]xamples/
+/[Aa]ssets/[Pp]lugins/[Ll]eapMotion/[Mm]odules/[Ii]nteractionEngine/[Ee]xamples/
+/[Aa]ssets/[Pp]lugins/[Ll]eapMotion/[Cc]ore/[Mm]odels/
+/[Aa]ssets/[Pp]lugins/[Ll]eapMotion/[Mm]odules/[Hh]ands/[Mm]odels/[Ss]keleton/
 
 # Asset meta data should only be ignored when the corresponding asset is also ignored
 !/[Aa]ssets/**/*.meta
