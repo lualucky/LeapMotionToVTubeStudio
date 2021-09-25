@@ -61,7 +61,7 @@ public class VTubeStudio : MonoBehaviour
     void WebsocketResponse(byte[] m)
     {
         string message = System.Text.Encoding.UTF8.GetString(m);
-        Debug.Log(message);
+        //Debug.Log(message);
 
         var response = JSON.Parse(message);
         var data = response["data"];
@@ -179,7 +179,7 @@ public class VTubeStudio : MonoBehaviour
             return;
         if (injectParameterDataStore != null)
         {
-            Debug.Log(JsonUtility.ToJson(injectParameterDataStore));
+            //Debug.Log(JsonUtility.ToJson(injectParameterDataStore));
             webSocket.Send(System.Text.Encoding.UTF8.GetBytes(JsonUtility.ToJson(injectParameterDataStore)));
             injectParameterDataStore = null;
         }

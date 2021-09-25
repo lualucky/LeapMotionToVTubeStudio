@@ -20,6 +20,9 @@ namespace Leap.Unity
                 WristRotationX,
                 WristRotationY,
                 WristRotationZ,
+                WristPositionX,
+                WristPositionY,
+                WristPositionZ,
                 ForearmExtension,
                 ForearmRotation,
                 UpperarmExtension,
@@ -30,20 +33,32 @@ namespace Leap.Unity
             public int hand;
             public int finger;
             public string paramName;
-            public GameObject UI;
             public string title;
             public float value;
+            public float offset = 0;
+            public int min;
+            public int max;
+            public int def;
 
-            public Parameter(paramType _type, int _hand, int _finger, string _title, GameObject _ui, LeapMotionCalculation Data)
+            public bool mirrored;
+            public char paramSide;
+
+            public UILineData UI;
+
+            public Parameter(paramType _type, int _hand, int _finger, int _min, int _max, string _title, GameObject _ui, LeapMotionCalculation Data, int _default = 0)
             {
                 type = _type;
                 hand = _hand;
                 finger = _finger;
                 title = _title;
-                UI = _ui;
-                UI.transform.GetChild(1).GetComponent<Text>().text = title;
+                min = _min;
+                max = _max;
+                value = _default;
+                def = _default;
+                UI = _ui.GetComponent<UILineData>();
 
-                paramName = "Param";
+                // -- Construct parameter name
+                paramName = "";
 
                 switch (type)
                 {
@@ -62,6 +77,15 @@ namespace Leap.Unity
                     case paramType.WristRotationZ:
                         paramName += "HandRotationZ";
                         break;
+                    case paramType.WristPositionX:
+                        paramName += "HandPositionX";
+                        break;
+                    case paramType.WristPositionY:
+                        paramName += "HandPositionY";
+                        break;
+                    case paramType.WristPositionZ:
+                        paramName += "HandPositionZ";
+                        break;
                     case paramType.ForearmExtension:
                         paramName += "ForearmExtension";
                         break;
@@ -76,10 +100,13 @@ namespace Leap.Unity
                         break;
                 }
                 if (hand == 0)
-                    paramName += "L";
+                    paramSide = 'L';
                 else
-                    paramName += "R";
-                UI.transform.GetChild(2).GetComponent<InputField>().text = paramName;
+                    paramSide = 'R';
+
+                UI.SetName(title);
+                UI.SetParameterName(paramName + paramSide);
+                UI.RegisterOffsetCallback(UpdateOffset);
             }
 
             // -----------------------------------------------------------------------------------
@@ -87,6 +114,11 @@ namespace Leap.Unity
             // -----------------------------------------------------------------------------------
             public float UpdateValue(LeapMotionCalculation Data)
             {
+                // -- parameter is disabled from UI
+                if (!UI.Enabled())
+                    return -Mathf.Infinity;
+
+                // -- get values
                 switch(type)
                 {
                     case paramType.TotalRotation:
@@ -104,6 +136,15 @@ namespace Leap.Unity
                     case paramType.WristRotationZ:
                         value = Data.GetWristRotation(hand).z;
                         break;
+                    case paramType.WristPositionX:
+                        value = Data.GetWristPosition(hand).x;
+                        break;
+                    case paramType.WristPositionY:
+                        value = Data.GetWristPosition(hand).y;
+                        break;
+                    case paramType.WristPositionZ:
+                        value = Data.GetWristPosition(hand).z;
+                        break;
                     case paramType.ForearmExtension:
                         value = Data.GetForearmExtension(hand);
                         break;
@@ -118,11 +159,31 @@ namespace Leap.Unity
                         break;
                 }
 
+                // -- apply offset
+                value += offset;
+
+                // -- mirror value if mirrored
+                if(mirrored)
+                {
+                    switch (type)
+                    {
+                        case paramType.SideRotation:
+                        case paramType.WristRotationX:
+                        case paramType.WristRotationZ:
+                        case paramType.WristPositionX:
+                        case paramType.WristPositionZ:
+                        case paramType.ForearmRotation:
+                        case paramType.UpperarmRotation:
+                            value = -value;
+                            break;
+                    }
+                }
+
                 // -- make it look good in UI
-                if(value > 1 || value < -1)
-                    UI.transform.GetChild(6).GetComponent<Text>().text = "" + Mathf.Round(value);
+                if (Mathf.Abs(min) + Mathf.Abs(max) < 10)
+                    UI.SetValue((int)(value * 1000.0f) / 1000.0f);
                 else
-                    UI.transform.GetChild(6).GetComponent<Text>().text = "" + (int)(value * 1000.0f) / 1000.0f;
+                    UI.SetValue(Mathf.Round(value));
 
                 // -- clean it up for VTube Studio
                 value = (int)(value * 1000.0f) / 1000.0f;
@@ -130,60 +191,100 @@ namespace Leap.Unity
                 return value;
             }
 
-            // -----------------------------------------------------------------------------------
-            // Return the parameter name
-            // -----------------------------------------------------------------------------------
-            public void UpdateParameterName()
+            // -- update the offset value from UI
+            public void UpdateOffset(string _newOffset)
             {
-                paramName = UI.transform.GetChild(2).GetComponent<InputField>().text;
+                offset = UI.Offset();
+            }
+        
+            // -- reverse which side the parameters are being sent to
+            public void MirrorMovement()
+            {
+                if (paramSide == 'L')
+                {
+                    paramSide= 'R';
+                }
+                else
+                {
+                    paramSide = 'L';
+                }
+
+                mirrored = !mirrored;
             }
         }
 
-        LeapMotionCalculation Data;
+        LeapMotionCalculation data;
         VTubeStudio vtube;
-
-        public GameObject TitleText;
-        public GameObject UILine;
-        public GameObject Content;
-
-        public GameObject SettingsPanel;
-
-        public List<Parameter> parameters;
-
+        List<Parameter> parameters;
         bool wasConnected = false;
+
+        // -- unique UI settings
+        public Toggle MirrorMovementToggle;
+        public GameObject TitleText;
+        public Transform Content;
+
+        // -- UI prefabs
+        public GameObject UILine;
+        public GameObject UILineWithOffset;
 
         void Start()
         {
-            Data = GetComponent<LeapMotionCalculation>();
+            data = GetComponent<LeapMotionCalculation>();
             vtube = GetComponent<VTubeStudio>();
 
             parameters = new List<Parameter>();
 
             // -- Create UI and parameters for all values
-            for(int h = 0; h < Data.HandCount(); ++h)
+            for(int h = 0; h < data.HandCount(); ++h)
             {
                 GameObject title = Instantiate(TitleText, Content.transform);
-                title.GetComponent<Text>().text = Data.HandName(h) + " Side";
+                title.GetComponent<Text>().text = data.HandName(h) + " Side";
 
-                parameters.Add(new Parameter(Parameter.paramType.UpperarmExtension, h, 0, "Upperarm Extension", Instantiate(UILine, Content.transform), Data));
-                parameters.Add(new Parameter(Parameter.paramType.UpperarmRotation, h, 0, "Shoulder Rotation", Instantiate(UILine, Content.transform), Data));
-                parameters.Add(new Parameter(Parameter.paramType.ForearmExtension, h, 0, "Forearm Extension", Instantiate(UILine, Content.transform), Data));
-                parameters.Add(new Parameter(Parameter.paramType.ForearmRotation, h, 0, "Elbow Rotation", Instantiate(UILine, Content.transform), Data));
-                parameters.Add(new Parameter(Parameter.paramType.WristRotationX, h, 0, "Wrist X", Instantiate(UILine, Content.transform), Data));
-                parameters.Add(new Parameter(Parameter.paramType.WristRotationY, h, 0, "Wrist Y", Instantiate(UILine, Content.transform), Data));
-                parameters.Add(new Parameter(Parameter.paramType.WristRotationZ, h, 0, "Wrist Z", Instantiate(UILine, Content.transform), Data));
+                // -- set up arm parameters
+                parameters.Add(new Parameter(Parameter.paramType.UpperarmExtension, h, 0, 0, 1, "Upperarm Extension", Instantiate(UILine, Content), data, 1));
+                parameters.Add(new Parameter(Parameter.paramType.UpperarmRotation, h, 0, -180, 180, "Shoulder Rotation", Instantiate(UILineWithOffset, Content), data));
+                parameters.Add(new Parameter(Parameter.paramType.ForearmExtension, h, 0, 0, 1, "Forearm Extension", Instantiate(UILine, Content), data, 1));
+                parameters.Add(new Parameter(Parameter.paramType.ForearmRotation, h, 0, -180, 180, "Elbow Rotation", Instantiate(UILineWithOffset, Content), data));
+                parameters.Add(new Parameter(Parameter.paramType.WristRotationX, h, 0, -1, 1, "Wrist Rotation X", Instantiate(UILine, Content), data));
+                parameters.Add(new Parameter(Parameter.paramType.WristRotationY, h, 0, -1, 1, "Wrist Rotation Y", Instantiate(UILine, Content), data));
+                parameters.Add(new Parameter(Parameter.paramType.WristRotationZ, h, 0, -1, 1, "Wrist Rotation Z", Instantiate(UILine, Content), data));
+                parameters.Add(new Parameter(Parameter.paramType.WristPositionX, h, 0, -5, 5, "Wrist Position X", Instantiate(UILine, Content), data));
+                parameters.Add(new Parameter(Parameter.paramType.WristPositionY, h, 0, -5, 5, "Wrist Position Y", Instantiate(UILine, Content), data));
+                parameters.Add(new Parameter(Parameter.paramType.WristPositionZ, h, 0, -5, 5, "Wrist Position Z", Instantiate(UILine, Content), data));
 
-                for (int f = 0; f < Data.FingerCount(h); ++f)
+                // -- set up finger parameters
+                for (int f = 0; f < data.FingerCount(h); ++f)
                 {
-                    string fingerTitle = Data.FingerName(f);
+                    string fingerTitle = data.FingerName(f);
 
-                    parameters.Add(new Parameter(Parameter.paramType.TotalRotation, h, f, fingerTitle + " Rotation", Instantiate(UILine, Content.transform), Data));
-                    parameters.Add(new Parameter(Parameter.paramType.SideRotation, h, f, fingerTitle + " Side to Side", Instantiate(UILine, Content.transform), Data));
+                    parameters.Add(new Parameter(Parameter.paramType.TotalRotation, h, f, -5, 30, fingerTitle + " Rotation", Instantiate(UILine, Content), data));
+
+                    // -- thumb is a special case because it has more side rotation
+                    if (f == 0)
+                    {
+                        parameters.Add(new Parameter(Parameter.paramType.SideRotation, h, f, -15, 40, fingerTitle + " Side to Side", Instantiate(UILine, Content), data));
+                    }
+                    else
+                    {
+                        parameters.Add(new Parameter(Parameter.paramType.SideRotation, h, f, -15, 15, fingerTitle + " Side to Side", Instantiate(UILine, Content), data));
+                    }
                 }
+            }
+
+            if (MirrorMovementToggle.isOn)
+                MirrorMovement(MirrorMovementToggle.isOn);
+
+            MirrorMovementToggle.onValueChanged.AddListener(MirrorMovement);
+        }
+
+        void MirrorMovement(bool value)
+        {
+            foreach (Parameter p in parameters)
+            {
+                p.MirrorMovement();
             }
         }
 
-        // Update is called once per frame
         void FixedUpdate()
         {
             // -- just connected for first time, create parameters for vtube studio
@@ -191,44 +292,25 @@ namespace Leap.Unity
             {
                 foreach (Parameter p in parameters)
                 {
-                    // -- TODO something about this min and max magic numbers
-                    switch(p.type)
-                    {
-                        case (Parameter.paramType.SideRotation):
-                            // -- thumb has more range
-                            if(p.finger == 0)
-                                vtube.ParameterCreation(p.paramName, p.title, -15, 40, 0);
-                            else
-                                vtube.ParameterCreation(p.paramName, p.title, -15, 15, 0);
-                            break;
-                        case (Parameter.paramType.TotalRotation):
-                            vtube.ParameterCreation(p.paramName, p.title, -5, 30, 0);
-                            break;
-                        default:
-                            vtube.ParameterCreation(p.paramName, p.title, -180, 180, 0);
-                            break;
-                    }
+                    vtube.ParameterCreation(p.paramName + p.paramSide, p.title, p.min, p.max, p.def);
                 }
             }
             wasConnected = vtube.isConnected();
 
             // -- update and send parameters
-            if (SettingsPanel.activeInHierarchy)
+            foreach (Parameter p in parameters)
             {
-                foreach (Parameter p in parameters)
+                float value = p.UpdateValue(data);
+
+                if (vtube.isConnected() && value != -Mathf.Infinity)
                 {
-                    float value = p.UpdateValue(Data);
-
-                    if (vtube.isConnected())
-                    {
-                        vtube.QueueInjectParameterData(p.paramName, value);
-                    }
-
+                    vtube.QueueInjectParameterData(p.paramName + p.paramSide, value);
                 }
 
-                if (vtube.isConnected())
-                    vtube.SendInjectParameterData();
             }
+
+            if (vtube.isConnected())
+                vtube.SendInjectParameterData();
         }
     }
 }
