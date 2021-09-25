@@ -45,7 +45,7 @@ namespace Leap.Unity
 
             public UILineData UI;
 
-            public Parameter(paramType _type, int _hand, int _finger, int _min, int _max, string _title, GameObject _ui, LeapMotionCalculation Data, int _default = 0)
+            public Parameter(paramType _type, int _hand, int _finger, int _min, int _max, string _title, GameObject _ui, TrackingData Data, int _default = 0)
             {
                 type = _type;
                 hand = _hand;
@@ -57,7 +57,7 @@ namespace Leap.Unity
                 def = _default;
                 UI = _ui.GetComponent<UILineData>();
 
-                // -- Construct parameter name
+                // -- construct parameter name
                 paramName = "";
 
                 switch (type)
@@ -107,12 +107,19 @@ namespace Leap.Unity
                 UI.SetName(title);
                 UI.SetParameterName(paramName + paramSide);
                 UI.RegisterOffsetCallback(UpdateOffset);
+
+                // -- load in offset preference
+                if (PlayerPrefs.HasKey(paramName + paramSide + "Offset"))
+                {
+                    offset = PlayerPrefs.GetFloat(paramName + paramSide + "Offset");
+                    UI.SetOffset(offset);
+                }
             }
 
             // -----------------------------------------------------------------------------------
             // Update the value from Leap Motion
             // -----------------------------------------------------------------------------------
-            public float UpdateValue(LeapMotionCalculation Data)
+            public float UpdateValue(TrackingData Data)
             {
                 // -- parameter is disabled from UI
                 if (!UI.Enabled())
@@ -125,7 +132,7 @@ namespace Leap.Unity
                         value = Data.GetFingerRotation(hand, finger);
                         break;
                     case paramType.SideRotation:
-                        value = Data.GetFingerSpread(hand, finger);
+                        value = Data.GetSideToSideRotation(hand, finger);
                         break;
                     case paramType.WristRotationX:
                         value = Data.GetWristRotation(hand).x;
@@ -195,6 +202,16 @@ namespace Leap.Unity
             public void UpdateOffset(string _newOffset)
             {
                 offset = UI.Offset();
+                char side = paramSide;
+                if(mirrored)
+                {
+                    if (side == 'L')
+                        side = 'R';
+                    else
+                        side = 'L';
+                }
+
+                PlayerPrefs.SetFloat(paramName + side + "Offset", offset);
             }
         
             // -- reverse which side the parameters are being sent to
@@ -213,7 +230,7 @@ namespace Leap.Unity
             }
         }
 
-        LeapMotionCalculation data;
+        TrackingData data;
         VTubeStudio vtube;
         List<Parameter> parameters;
         bool wasConnected = false;
@@ -229,12 +246,12 @@ namespace Leap.Unity
 
         void Start()
         {
-            data = GetComponent<LeapMotionCalculation>();
+            data = GetComponent<LeapMotionTrackingData>();
             vtube = GetComponent<VTubeStudio>();
 
             parameters = new List<Parameter>();
 
-            // -- Create UI and parameters for all values
+            // -- create UI and parameters for all values
             for(int h = 0; h < data.HandCount(); ++h)
             {
                 GameObject title = Instantiate(TitleText, Content.transform);

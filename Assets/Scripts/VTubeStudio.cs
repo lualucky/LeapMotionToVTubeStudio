@@ -179,7 +179,6 @@ public class VTubeStudio : MonoBehaviour
             return;
         if (injectParameterDataStore != null)
         {
-            //Debug.Log(JsonUtility.ToJson(injectParameterDataStore));
             webSocket.Send(System.Text.Encoding.UTF8.GetBytes(JsonUtility.ToJson(injectParameterDataStore)));
             injectParameterDataStore = null;
         }
