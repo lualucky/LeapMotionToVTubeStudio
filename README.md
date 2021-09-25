@@ -9,4 +9,4 @@ This repository includes SimpleJSON https://github.com/Bunny83/SimpleJSON under 
 
 This repository includes NativeWebSocket https://github.com/endel/NativeWebSocket under Apache 2.0
 
-This repository includes part of the Leap Motion Unity Modules https://github.com/leapmotion/UnityModules under Apache 2.0
+This repository includes the Leap Motion Unity Modules https://github.com/leapmotion/UnityModules under Apache 2.0
