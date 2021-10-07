@@ -42,6 +42,7 @@ namespace Leap.Unity
             public List<Finger> Fingers;
             public Vector3 WristRotPrev;
             public Vector3 WristRotation;
+            public Vector3 WristRotationLocal;
             public Vector3 WristPosition;
 
             public float ForearmExtension;
@@ -161,10 +162,7 @@ namespace Leap.Unity
                 float deltaUpperarm;
                 hand.UpperarmPrev.GetAxisFromToRotation(elbowProj, Vector3.forward, out deltaUpperarm);
                 hand.UpperarmPrev = elbowProj;
-                if(leapHand.IsLeft)
-                    hand.UpperarmRotation -= deltaUpperarm;
-                else
-                    hand.UpperarmRotation += deltaUpperarm;
+                hand.UpperarmRotation += deltaUpperarm;
 
                 // -- Forearm extension calculations
                 Vector3 wristPos = leapHand.WristPosition.ToVector3() - center;
@@ -176,17 +174,13 @@ namespace Leap.Unity
                 float forearmRotDelta;
                 hand.ForearmPrev.GetAxisFromToRotation(wristProj, Vector3.forward, out forearmRotDelta);
                 hand.ForearmPrev = wristProj;
-                if (leapHand.IsRight)
-                    hand.ForearmRotation -= forearmRotDelta;
-                else
-                    hand.ForearmRotation += forearmRotDelta;
+                hand.ForearmRotation += forearmRotDelta;
 
                 // -- Wrist position
                 hand.WristPosition = leapHand.WristPosition.ToVector3();
 
                 // -- Wrist rotation calculations
                 Vector3 palm = leapHand.PalmNormal.ToVector3();
-                //Debug.Log("Palm: " + palm);
                 hand.WristRotation = palm;
                 hand.WristRotPrev = palm;
 

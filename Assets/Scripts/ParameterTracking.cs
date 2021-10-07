@@ -63,10 +63,10 @@ namespace Leap.Unity
                 switch (type)
                 {
                     case paramType.TotalRotation:
-                        paramName += "Hand" + Data.FingerName(finger);
+                        paramName += "Finger" + Data.FingerName(finger);
                         break;
                     case paramType.SideRotation:
-                        paramName += "Hand" + Data.FingerName(finger) + "Spread";
+                        paramName += "Finger" + Data.FingerName(finger) + "Spread";
                         break;
                     case paramType.WristRotationX:
                         paramName += "HandRotationX";
@@ -106,14 +106,16 @@ namespace Leap.Unity
 
                 UI.SetName(title);
                 UI.SetParameterName(paramName + paramSide);
-                UI.RegisterOffsetCallback(UpdateOffset);
 
                 // -- load in offset preference
                 if (PlayerPrefs.HasKey(paramName + paramSide + "Offset"))
                 {
+                    // -- CORRECT PARAM NAME IS MIRRORED
                     offset = PlayerPrefs.GetFloat(paramName + paramSide + "Offset");
                     UI.SetOffset(offset);
                 }
+
+                UI.RegisterOffsetCallback(UpdateOffset);
             }
 
             // -----------------------------------------------------------------------------------
@@ -174,12 +176,9 @@ namespace Leap.Unity
                 {
                     switch (type)
                     {
-                        case paramType.SideRotation:
                         case paramType.WristRotationX:
-                        case paramType.WristRotationZ:
                         case paramType.WristPositionX:
-                        case paramType.WristPositionZ:
-                        case paramType.ForearmRotation:
+                        //case paramType.ForearmRotation:
                         case paramType.UpperarmRotation:
                             value = -value;
                             break;
@@ -262,9 +261,9 @@ namespace Leap.Unity
                 parameters.Add(new Parameter(Parameter.paramType.UpperarmRotation, h, 0, -180, 180, "Shoulder Rotation", Instantiate(UILineWithOffset, Content), data));
                 parameters.Add(new Parameter(Parameter.paramType.ForearmExtension, h, 0, 0, 1, "Forearm Extension", Instantiate(UILine, Content), data, 1));
                 parameters.Add(new Parameter(Parameter.paramType.ForearmRotation, h, 0, -180, 180, "Elbow Rotation", Instantiate(UILineWithOffset, Content), data));
-                parameters.Add(new Parameter(Parameter.paramType.WristRotationX, h, 0, -1, 1, "Wrist Rotation X", Instantiate(UILine, Content), data));
-                parameters.Add(new Parameter(Parameter.paramType.WristRotationY, h, 0, -1, 1, "Wrist Rotation Y", Instantiate(UILine, Content), data));
-                parameters.Add(new Parameter(Parameter.paramType.WristRotationZ, h, 0, -1, 1, "Wrist Rotation Z", Instantiate(UILine, Content), data));
+                parameters.Add(new Parameter(Parameter.paramType.WristRotationX, h, 0, -1, 1, "Wrist Rotation X", Instantiate(UILineWithOffset, Content), data));
+                parameters.Add(new Parameter(Parameter.paramType.WristRotationY, h, 0, -1, 1, "Wrist Rotation Y", Instantiate(UILineWithOffset, Content), data));
+                parameters.Add(new Parameter(Parameter.paramType.WristRotationZ, h, 0, -1, 1, "Wrist Rotation Z", Instantiate(UILineWithOffset, Content), data));
                 parameters.Add(new Parameter(Parameter.paramType.WristPositionX, h, 0, -5, 5, "Wrist Position X", Instantiate(UILine, Content), data));
                 parameters.Add(new Parameter(Parameter.paramType.WristPositionY, h, 0, -5, 5, "Wrist Position Y", Instantiate(UILine, Content), data));
                 parameters.Add(new Parameter(Parameter.paramType.WristPositionZ, h, 0, -5, 5, "Wrist Position Z", Instantiate(UILine, Content), data));
@@ -288,6 +287,9 @@ namespace Leap.Unity
                 }
             }
 
+            if (PlayerPrefs.HasKey("MirrorMovement"))
+                MirrorMovementToggle.isOn = PlayerPrefs.GetInt("MirrorMovement") > 0;
+
             if (MirrorMovementToggle.isOn)
                 MirrorMovement(MirrorMovementToggle.isOn);
 
@@ -296,6 +298,8 @@ namespace Leap.Unity
 
         void MirrorMovement(bool value)
         {
+            PlayerPrefs.SetInt("MirrorMovement", value ? 1 : 0);
+
             foreach (Parameter p in parameters)
             {
                 p.MirrorMovement();

@@ -15,11 +15,18 @@ public class UILineData : MonoBehaviour
 
     private void Start()
     {
+        if (PlayerPrefs.HasKey(ParameterNameText.text + "Enabled"))
+        {
+            EnableToggle.isOn = PlayerPrefs.GetInt(ParameterNameText.text + "Enabled") > 0;
+        }
+
         EnableToggle.onValueChanged.AddListener(Toggle);
     }
 
     public void Toggle(bool enable)
     {
+        PlayerPrefs.SetInt(ParameterNameText.text + "Enabled", EnableToggle.isOn ? 1 : 0);
+
         foreach (GameObject obj in ToggleObjects)
         {
             obj.SetActive(enable);
