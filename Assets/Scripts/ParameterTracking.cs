@@ -168,15 +168,29 @@ namespace Leap.Unity
                         break;
                 }
 
-                // -- apply offset
-                value += offset;
+                if (offset != 0)
+                {
+                    // -- apply offset
+                    value += offset;
+
+                    if (value > max)
+                    {
+                        value = value - max + min;
+                    }
+                    else if (value < min)
+                    {
+                        value = value - min + max;
+                    }
+                }
 
                 // -- mirror value if mirrored
-                if(mirrored)
+                if (mirrored)
                 {
                     switch (type)
                     {
-                        case paramType.WristRotationX:
+                        case paramType.WristRotationZ:
+                            value = (2 * def) - value;
+                            break;
                         case paramType.WristPositionX:
                         //case paramType.ForearmRotation:
                         case paramType.UpperarmRotation:
@@ -261,9 +275,9 @@ namespace Leap.Unity
                 parameters.Add(new Parameter(Parameter.paramType.UpperarmRotation, h, 0, -180, 180, "Shoulder Rotation", Instantiate(UILineWithOffset, Content), data));
                 parameters.Add(new Parameter(Parameter.paramType.ForearmExtension, h, 0, 0, 1, "Forearm Extension", Instantiate(UILine, Content), data, 1));
                 parameters.Add(new Parameter(Parameter.paramType.ForearmRotation, h, 0, -180, 180, "Elbow Rotation", Instantiate(UILineWithOffset, Content), data));
-                parameters.Add(new Parameter(Parameter.paramType.WristRotationX, h, 0, -1, 1, "Wrist Rotation X", Instantiate(UILineWithOffset, Content), data));
-                parameters.Add(new Parameter(Parameter.paramType.WristRotationY, h, 0, -1, 1, "Wrist Rotation Y", Instantiate(UILineWithOffset, Content), data));
-                parameters.Add(new Parameter(Parameter.paramType.WristRotationZ, h, 0, -1, 1, "Wrist Rotation Z", Instantiate(UILineWithOffset, Content), data));
+                parameters.Add(new Parameter(Parameter.paramType.WristRotationX, h, 0, 0, 360, "Wrist Rotation X", Instantiate(UILineWithOffset, Content), data, 180));
+                parameters.Add(new Parameter(Parameter.paramType.WristRotationY, h, 0, 0, 360, "Wrist Rotation Y", Instantiate(UILineWithOffset, Content), data, 180));
+                parameters.Add(new Parameter(Parameter.paramType.WristRotationZ, h, 0, 0, 360, "Wrist Rotation Z", Instantiate(UILineWithOffset, Content), data, 180));
                 parameters.Add(new Parameter(Parameter.paramType.WristPositionX, h, 0, -5, 5, "Wrist Position X", Instantiate(UILine, Content), data));
                 parameters.Add(new Parameter(Parameter.paramType.WristPositionY, h, 0, -5, 5, "Wrist Position Y", Instantiate(UILine, Content), data));
                 parameters.Add(new Parameter(Parameter.paramType.WristPositionZ, h, 0, -5, 5, "Wrist Position Z", Instantiate(UILine, Content), data));
