@@ -364,11 +364,11 @@ namespace Leap.Unity {
         // the pose delta from the "local" tracked pose to the actual camera
         // pose.
         if (!_trackingBaseDeltaPose.HasValue) {
-          _trackingBaseDeltaPose = _cachedCamera.transform.ToLocalPose()
-                                    * trackedPose.inverse;
+          _trackingBaseDeltaPose = _cachedCamera.transform.ToLocalPose().mul(
+                                      trackedPose.inverse());
         }
         // This way, we always track a scene-space tracked pose.
-        trackedPose = _trackingBaseDeltaPose.Value * trackedPose;
+        trackedPose = _trackingBaseDeltaPose.Value.mul(trackedPose);
       }
       else if (_deviceOffsetMode == DeviceOffsetMode.Transform) {
         trackedPose = deviceOrigin.ToPose();
@@ -408,18 +408,12 @@ namespace Leap.Unity {
     /// The POLICY_OPTIMIZE_HMD flag improves tracking for head-mounted devices.
     /// </summary>
     protected override void initializeFlags() {
-      if (_leapController == null) {
-        return;
-      }
-
-      // Optimize for head-mounted tracking if on head-mounted display.
-      _leapController.ClearPolicy(Controller.PolicyFlag.POLICY_OPTIMIZE_SCREENTOP);
-      _leapController.SetPolicy(Controller.PolicyFlag.POLICY_OPTIMIZE_HMD);
+      ChangeTrackingMode(TrackingOptimizationMode.HMD);
     }
 
     protected override void transformFrame(Frame source, Frame dest) {
-      LeapTransform leapTransform = GetWarpedMatrix(source.Timestamp);
-      dest.CopyFrom(source).Transform(leapTransform);
+        LeapTransform leapTransform = GetWarpedMatrix(source.Timestamp);
+        dest.CopyFrom(source).Transform(leapTransform);
     }
 
     #endregion
