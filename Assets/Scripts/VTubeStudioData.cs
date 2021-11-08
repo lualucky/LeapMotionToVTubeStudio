@@ -70,7 +70,7 @@ public class VTubeAuthenticationToken : VTubeMessage
     {
         public string pluginName;
         public string pluginDeveloper;
-        //public string pluginIcon;
+        public string pluginIcon;
     }
 
     public Package data;
@@ -81,6 +81,9 @@ public class VTubeAuthenticationToken : VTubeMessage
         data = new Package();
         data.pluginName = Application.productName;
         data.pluginDeveloper = Application.companyName;
+
+        if (icon.texture.width == 128 && icon.texture.height == 128)
+            data.pluginIcon = System.Convert.ToBase64String(icon.texture.EncodeToPNG());
     }
 }
 
@@ -153,7 +156,7 @@ public class VTubeParameterCreationRequest : VTubeMessage
 }
 
 [Serializable]
-public class InjectParameterData : VTubeMessage
+public class VTubeInjectParameterData : VTubeMessage
 {
     [Serializable]
     public class Package
@@ -170,7 +173,7 @@ public class InjectParameterData : VTubeMessage
 
     public Package data;
 
-    public InjectParameterData()
+    public VTubeInjectParameterData()
     {
         messageType = VTubeData.InjectParameterData + "Request";
         data = new Package();
@@ -184,5 +187,123 @@ public class InjectParameterData : VTubeMessage
         val.value = value;
         val.weight = weight;
         data.parameterValues.Add(val);
+    }
+}
+
+[Serializable]
+public class VTubeColorTintRequest : VTubeMessage
+{
+    [Serializable]
+    public class Package
+    {
+        [Serializable]
+        public class ColorPackage
+        {
+            public int colorR;
+            public int colorG;
+            public int colorB;
+            public int colorA;
+            public bool jeb_;
+        }
+        [Serializable]
+        public class ArtMeshPackage
+        {
+            public bool tintAll;
+            public List<int> artMeshNumber;
+            public List<string> nameExact;
+            public List<string> nameContains;
+            public List<string> tagExact;
+            public List<string> tagContains;
+        }
+
+        public ColorPackage colorTint;
+        public ArtMeshPackage artMeshMatcher;
+    }
+
+    public Package data;
+
+    public VTubeColorTintRequest(Color color, List<int> artMeshNumber, List<string> nameExact, List<string> nameContains, List<string> tagExact, List<string> tagContains, bool tintAll = false)
+    {
+        messageType = VTubeData.ColorTint + "Request";
+        data = new Package();
+        data.artMeshMatcher = new Package.ArtMeshPackage();
+        data.colorTint = new Package.ColorPackage();
+
+        data.colorTint.colorR = Mathf.RoundToInt(color.r * 255);
+        data.colorTint.colorG = Mathf.RoundToInt(color.g * 255);
+        data.colorTint.colorB = Mathf.RoundToInt(color.b * 255);
+        data.colorTint.colorA = Mathf.RoundToInt(color.a * 255);
+
+        data.artMeshMatcher.tintAll = tintAll;
+        data.artMeshMatcher.artMeshNumber = artMeshNumber;
+        data.artMeshMatcher.nameExact = nameExact;
+        data.artMeshMatcher.nameContains = nameContains;
+        data.artMeshMatcher.tagExact = tagExact;
+        data.artMeshMatcher.tagContains = tagContains;
+    }
+
+    public VTubeColorTintRequest(List<int> artMeshNumber, List<string> nameExact, List<string> nameContains, List<string> tagExact, List<string> tagContains, bool tintAll = false)
+    {
+        messageType = VTubeData.ColorTint + "Request";
+        data = new Package();
+        data.artMeshMatcher = new Package.ArtMeshPackage();
+        data.colorTint = new Package.ColorPackage();
+
+        data.colorTint.jeb_ = true;
+
+        data.artMeshMatcher.tintAll = tintAll;
+        data.artMeshMatcher.artMeshNumber = artMeshNumber;
+        data.artMeshMatcher.nameExact = nameExact;
+        data.artMeshMatcher.nameContains = nameContains;
+        data.artMeshMatcher.tagExact = tagExact;
+        data.artMeshMatcher.tagContains = tagContains;
+    }
+}
+
+[Serializable]
+public class VTubeParameterValueRequest : VTubeMessage
+{
+    [Serializable]
+    public class Package
+    {
+        public string name;
+    }
+
+    public Package data;
+
+    public VTubeParameterValueRequest(string parameterName)
+    {
+        messageType = VTubeData.ParameterValue + "Request";
+        data = new Package();
+        data.name = parameterName;
+    }
+}
+
+public class VTubeParameterValueData
+{
+    public string name;
+    public float value;
+    public string addedBy;
+    public float min;
+    public float max;
+    public float defaultValue;
+
+    public VTubeParameterValueData(string parameterName)
+    {
+        name = parameterName;
+    }
+
+    public void SetValue(float newValue)
+    {
+        value = newValue;
+    }
+}
+
+[Serializable]
+public class VTubeLive2DParameterListRequest : VTubeMessage
+{
+    public VTubeLive2DParameterListRequest()
+    {
+        messageType = VTubeData.Live2DParameterList + "Request";
     }
 }

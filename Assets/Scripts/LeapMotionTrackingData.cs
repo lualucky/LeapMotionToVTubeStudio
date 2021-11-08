@@ -53,6 +53,8 @@ namespace Leap.Unity
             public Vector3 UpperarmPrev;
             public float UpperarmRotation;
 
+            public bool Found;
+
             public Hand(string _name)
             {
                 Name = _name;
@@ -73,7 +75,6 @@ namespace Leap.Unity
         class Finger
         {
             public float SideRotation;
-            public float BaseRotation;
             public float TotalRotation;
         }
 
@@ -126,6 +127,8 @@ namespace Leap.Unity
         // ===================================================================================
         private void FixedUpdate()
         {
+            bool[] trackingFound = new bool[] { false, false };
+
             // -- Update hand values
             for (int h = 0; h < provider.CurrentFrame.Hands.Count; ++h)
             {
@@ -144,6 +147,8 @@ namespace Leap.Unity
                 else
                     continue;
 
+                trackingFound[h] = true;
+
                 // -- Calculate base of neck
                 Vector3 center = NeckBase.position;
                 if (leapHand.IsRight)
@@ -151,41 +156,38 @@ namespace Leap.Unity
                 else if (leapHand.IsLeft)
                     center = LShoulder.position;
 
-                // -- Upperarm extension
-                Vector3 elbowPos = center - leapHand.Arm.ElbowPosition.ToVector3();
-
                 // -- debug draw
                 if (leapHand.IsLeft)
                     LElbow.position = leapHand.Arm.ElbowPosition.ToVector3();
                 else if (leapHand.IsRight)
                     RElbow.position = leapHand.Arm.ElbowPosition.ToVector3();
 
+                // -- Upperarm Vector
+                Vector3 elbowPos = leapHand.Arm.ElbowPosition.ToVector3() - center;
+
+                // -- Upperarm Extension
                 Vector3 elbowProj = Vector3.ProjectOnPlane(elbowPos, Vector3.forward);
                 hand.UpperarmExtension = (elbowProj.magnitude) / (elbowPos.magnitude);
 
                 // -- Upperarm rotation calculations
                 hand.UpperarmRotation = Vector3.SignedAngle(Vector3.down, elbowProj, Vector3.forward);
 
-                // -- Forearm extension calculations
-                Vector3 wristPos = leapHand.WristPosition.ToVector3() - center;
-                wristPos = wristPos - elbowPos;
+                Vector3 wristPos = leapHand.WristPosition.ToVector3() - elbowPos - center;
                 Vector3 wristProj = Vector3.ProjectOnPlane(wristPos, Vector3.forward);
+
+                // -- Forearm extension calculations
                 hand.ForearmExtension = (wristProj.magnitude) / (wristPos.magnitude);
 
                 // -- Forearm rotation calculation
-                hand.ForearmRotation -= Vector3.SignedAngle(hand.ForearmPrev, wristProj,
-                                                        Vector3.forward);
-                hand.ForearmPrev = wristProj;
+                Vector3 localForearm = Quaternion.Euler(0, 0, -hand.UpperarmRotation) * wristProj;
+                hand.ForearmRotation -= Vector3.SignedAngle(hand.ForearmPrev, localForearm, Vector3.forward);
+                hand.ForearmPrev = localForearm;
 
                 // -- Wrist position
-                hand.WristPosition = leapHand.WristPosition.ToVector3();
+                hand.WristPosition = HandPostion(leapHand);
 
                 // -- Wrist rotation calculations
-                Quaternion palm = leapHand.Rotation.ToQuaternion();
-                hand.WristRotation = palm.eulerAngles;
-                hand.WristRotation.x = (hand.WristRotation.x + 180) % 360;
-                hand.WristRotation.y = (hand.WristRotation.y + 180) % 360;
-                hand.WristRotation.z = (hand.WristRotation.z + 180) % 360;
+                hand.WristRotation = HandRotations(leapHand);
 
                 // -- Finger calculations
                 for (int f = 0; f < hand.Fingers.Count; ++f)
@@ -195,43 +197,74 @@ namespace Leap.Unity
 
                     if (leapFinger != null)
                     {
-                        // -- Spread/wagging calculation
-                        Quaternion jointRotation = Quaternion.Inverse(leapFinger.bones[0].Rotation.ToQuaternion())
-                                                   * leapFinger.bones[1].Rotation.ToQuaternion();
-
-                        // -- clamp change within 3 degrees
-                        finger.SideRotation = finger.SideRotation + Mathf.Clamp(jointRotation.eulerAngles.y - finger.SideRotation, -3, 3);
-                        if (finger.SideRotation > 180f)
-                        {
-                            finger.SideRotation -= 360f;
-                        }
-                        // -- thumb has far more range of motion, but spread frequently glitches, esp. when making a fist.
-                        if(leapFinger.Type != Leap.Finger.FingerType.TYPE_THUMB)
-                            finger.SideRotation = Mathf.Clamp(finger.SideRotation, -15, 15); ;
-
-                        // -- Base joint rotation calculation
-                        finger.BaseRotation = jointRotation.x;
-                        if (finger.BaseRotation > 180f)
-                        {
-                            finger.BaseRotation -= 360f;
-                        }
-
-                        // -- Total finger rotation calculation, just average the rotation of each joint
-                        float total = 0;
-                        for (int j = 1; j < leapHand.Fingers[f].bones.Length - 1; ++j)
-                        {
-                            Quaternion jointRot = Quaternion.Inverse(leapFinger.Bone((Bone.BoneType)(j)).Rotation.ToQuaternion())
-                                                  * leapFinger.Bone((Bone.BoneType)(j+1)).Rotation.ToQuaternion();
-                            total += jointRot.eulerAngles.x;
-                        }
-                        finger.TotalRotation = total / leapHand.Fingers[f].bones.Length;
-                        if (finger.TotalRotation > 50f)
-                        {
-                            finger.TotalRotation = 0;
-                        }
+                        finger.SideRotation = FingerSpreadCalc(leapFinger, finger.SideRotation);
+                        finger.TotalRotation = FingerRotationCalc(leapFinger);
                     }
                 }
             }
+
+            hands[0].Found = trackingFound[0];
+            hands[1].Found = trackingFound[1];
+        }
+
+        // -- Total finger rotation calculation, just average the rotation of each joint
+        float FingerRotationCalc(Leap.Finger leapFinger)
+        {
+            float result;
+
+            float total = 0;
+            for (int j = 1; j < leapFinger.bones.Length - 1; ++j)
+            {
+                Quaternion jointRot = Quaternion.Inverse(leapFinger.Bone((Bone.BoneType)(j)).Rotation.ToQuaternion())
+                                      * leapFinger.Bone((Bone.BoneType)(j + 1)).Rotation.ToQuaternion();
+                total += jointRot.eulerAngles.x;
+            }
+            result = total / leapFinger.bones.Length;
+            if (result > 50f)
+            {
+                result = 0;
+            }
+
+            // -- clamp to 0 - 1
+            result = Mathf.Clamp(result / 30f, 0, 1);
+            return result;
+        }
+
+        // -- Spread/wagging calculation
+        float FingerSpreadCalc(Leap.Finger leapFinger, float PreviousSpread)
+        {
+            float result = PreviousSpread;
+
+            Quaternion jointRotation = Quaternion.Inverse(leapFinger.bones[0].Rotation.ToQuaternion())
+                                       * leapFinger.bones[1].Rotation.ToQuaternion();
+
+            // -- clamp change within 3 degrees
+            result = result + Mathf.Clamp((jointRotation.eulerAngles.y - result), -3, 3);
+            result = Mathf.Clamp(result / 15f, -1, 1);
+            if (result > 180f)
+            {
+                result -= 360f;
+            }
+            // -- thumb has far more range of motion, but spread frequently glitches, esp. when making a fist.
+            if (leapFinger.Type != Leap.Finger.FingerType.TYPE_THUMB)
+                result = Mathf.Clamp(result / 15f, -1, 1); ;
+
+            return result;
+        }
+
+        Vector3 HandRotations(Leap.Hand leapHand)
+        {
+            Vector3 result;
+
+            Quaternion palm = leapHand.Rotation.ToQuaternion();
+            result = palm.eulerAngles;
+
+            return result;
+        }
+
+        Vector3 HandPostion(Leap.Hand leapHand)
+        {
+            return leapHand.WristPosition.ToVector3();
         }
 
         // ===================================================================================
@@ -268,7 +301,7 @@ namespace Leap.Unity
 
         // ===================================================================================
         // The side to side rotation of a finger, like when you spread your fingers
-        // Returns an angle in degrees. For all fingers except thumb, clamped to -15 to 15
+        // Returns an angle in degrees. For all fingers except thumb, clamped to -1 to 1
         // ===================================================================================
         public override float GetSideToSideRotation(int hand, int finger)
         {
@@ -304,12 +337,13 @@ namespace Leap.Unity
         // ===================================================================================
         public override float GetUpperarmRotation(int hand)
         {
-            float rot = hands[hand].UpperarmRotation;
+            /*float rot = hands[hand].UpperarmRotation;
             if (rot < 0)
                 rot = rot + 360;
 
             
-            return rot - 180;
+            return rot - 180;*/
+            return hands[hand].UpperarmRotation;;
         }
 
         // ===================================================================================
@@ -326,6 +360,14 @@ namespace Leap.Unity
         public override Vector3 GetWristPosition(int hand)
         {
             return hands[hand].WristPosition;
+        }
+
+        // ===================================================================================
+        // Whether hand was tracked this frame
+        // ===================================================================================
+        public bool HandTracked(int hand)
+        {
+            return hands[hand].Found;
         }
 
         public void SetLeapMode()

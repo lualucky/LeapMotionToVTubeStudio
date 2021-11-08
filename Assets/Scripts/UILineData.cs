@@ -8,7 +8,7 @@ public class UILineData : MonoBehaviour
     public Toggle EnableToggle;
     public Text NameText;
     public Text ParameterNameText;
-    public InputField OffsetInput;
+    public InputField SmoothInput;
     public Text ValueText;
 
     public List<GameObject> ToggleObjects;
@@ -53,22 +53,22 @@ public class UILineData : MonoBehaviour
         return ParameterNameText.text;
     }
 
-    public void SetOffset(float value)
+    public void SetSmooth(int value)
     {
-        OffsetInput.text = "" + value;
+        SmoothInput.text = "" + value;
     }
 
-    public float Offset()
+    public int Smooth()
     {
-        if(OffsetInput)
-            return float.Parse(OffsetInput.text);
+        if(SmoothInput)
+            return int.Parse(SmoothInput.text);
         return 0;
     }
 
-    public void RegisterOffsetCallback(UnityEngine.Events.UnityAction<string> offsetEvent)
+    public void RegisterSmoothCallback(UnityEngine.Events.UnityAction<string> smoothEvent)
     {
-        if(OffsetInput)
-            OffsetInput.onValueChanged.AddListener(offsetEvent);
+        if(SmoothInput)
+            SmoothInput.onValueChanged.AddListener(smoothEvent);
     }
 
     public void SetValue(float value)

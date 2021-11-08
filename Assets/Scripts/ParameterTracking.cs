@@ -17,36 +17,42 @@ namespace Leap.Unity
             {
                 TotalRotation,
                 SideRotation,
-                WristRotationX,
-                WristRotationY,
-                WristRotationZ,
-                WristPositionX,
-                WristPositionY,
-                WristPositionZ,
+                AngleX,
+                AngleY,
+                AngleZ,
+                PositionX,
+                PositionY,
+                PositionZ,
                 ForearmExtension,
                 ForearmRotation,
                 UpperarmExtension,
                 UpperarmRotation,
+                Found,
             }
 
+            public bool defaultParam;
             public paramType type;
             public int hand;
             public int finger;
             public string paramName;
             public string title;
             public float value;
-            public float offset = 0;
+
+            Queue<float> smoothValues;
+            public int smooth = 0;
+
             public int min;
             public int max;
             public int def;
 
             public bool mirrored;
-            public char paramSide;
 
             public UILineData UI;
 
-            public Parameter(paramType _type, int _hand, int _finger, int _min, int _max, string _title, GameObject _ui, TrackingData Data, int _default = 0)
+            public Parameter(bool _defaultParam, paramType _type, int _hand, int _default, int _min, int _max, string _title, GameObject _ui, TrackingData Data, int _finger = 0)
             {
+                defaultParam = _defaultParam;
+                smoothValues = new Queue<float>();
                 type = _type;
                 hand = _hand;
                 finger = _finger;
@@ -58,64 +64,30 @@ namespace Leap.Unity
                 UI = _ui.GetComponent<UILineData>();
 
                 // -- construct parameter name
-                paramName = "";
-
                 switch (type)
                 {
                     case paramType.TotalRotation:
-                        paramName += "Finger" + Data.FingerName(finger);
+                        paramName = "Finger" + "_" + (finger + 1) + "_" + Data.FingerName(finger);
                         break;
                     case paramType.SideRotation:
-                        paramName += "Finger" + Data.FingerName(finger) + "Spread";
+                        paramName = "Finger" + "Spread" + (finger + 1) + Data.FingerName(finger);
                         break;
-                    case paramType.WristRotationX:
-                        paramName += "HandRotationX";
-                        break;
-                    case paramType.WristRotationY:
-                        paramName += "HandRotationY";
-                        break;
-                    case paramType.WristRotationZ:
-                        paramName += "HandRotationZ";
-                        break;
-                    case paramType.WristPositionX:
-                        paramName += "HandPositionX";
-                        break;
-                    case paramType.WristPositionY:
-                        paramName += "HandPositionY";
-                        break;
-                    case paramType.WristPositionZ:
-                        paramName += "HandPositionZ";
-                        break;
-                    case paramType.ForearmExtension:
-                        paramName += "ForearmExtension";
-                        break;
-                    case paramType.ForearmRotation:
-                        paramName += "ElbowRotation";
-                        break;
-                    case paramType.UpperarmExtension:
-                        paramName += "UpperarmExtension";
-                        break;
-                    case paramType.UpperarmRotation:
-                        paramName += "ShoulderRotation";
+                    default:
+                        paramName = type.ToString();
                         break;
                 }
-                if (hand == 0)
-                    paramSide = 'L';
-                else
-                    paramSide = 'R';
 
                 UI.SetName(title);
-                UI.SetParameterName(paramName + paramSide);
+                UI.SetParameterName(ParameterName());
 
                 // -- load in offset preference
-                if (PlayerPrefs.HasKey(paramName + paramSide + "Offset"))
+                if (PlayerPrefs.HasKey(paramName + hand + "Smooth"))
                 {
-                    // -- CORRECT PARAM NAME IS MIRRORED
-                    offset = PlayerPrefs.GetFloat(paramName + paramSide + "Offset");
-                    UI.SetOffset(offset);
+                    smooth = PlayerPrefs.GetInt(paramName + hand + "Smooth");
+                    UI.SetSmooth(smooth);
                 }
 
-                UI.RegisterOffsetCallback(UpdateOffset);
+                UI.RegisterSmoothCallback(UpdateSmooth);
             }
 
             // -----------------------------------------------------------------------------------
@@ -136,22 +108,22 @@ namespace Leap.Unity
                     case paramType.SideRotation:
                         value = Data.GetSideToSideRotation(hand, finger);
                         break;
-                    case paramType.WristRotationX:
+                    case paramType.AngleX:
                         value = Data.GetWristRotation(hand).x;
                         break;
-                    case paramType.WristRotationY:
+                    case paramType.AngleY:
                         value = Data.GetWristRotation(hand).y;
                         break;
-                    case paramType.WristRotationZ:
+                    case paramType.AngleZ:
                         value = Data.GetWristRotation(hand).z;
                         break;
-                    case paramType.WristPositionX:
+                    case paramType.PositionX:
                         value = Data.GetWristPosition(hand).x;
                         break;
-                    case paramType.WristPositionY:
+                    case paramType.PositionY:
                         value = Data.GetWristPosition(hand).y;
                         break;
-                    case paramType.WristPositionZ:
+                    case paramType.PositionZ:
                         value = Data.GetWristPosition(hand).z;
                         break;
                     case paramType.ForearmExtension:
@@ -168,30 +140,15 @@ namespace Leap.Unity
                         break;
                 }
 
-                if (offset != 0)
-                {
-                    // -- apply offset
-                    value += offset;
-
-                    if (value > max)
-                    {
-                        value = value - max + min;
-                    }
-                    else if (value < min)
-                    {
-                        value = value - min + max;
-                    }
-                }
-
                 // -- mirror value if mirrored
                 if (mirrored)
                 {
                     switch (type)
                     {
-                        case paramType.WristRotationZ:
+                        case paramType.AngleZ:
                             value = (2 * def) - value;
                             break;
-                        case paramType.WristPositionX:
+                        case paramType.AngleX:
                         //case paramType.ForearmRotation:
                         case paramType.UpperarmRotation:
                             value = -value;
@@ -208,38 +165,52 @@ namespace Leap.Unity
                 // -- clean it up for VTube Studio
                 value = (int)(value * 1000.0f) / 1000.0f;
 
+                // -- smooth values over certain given count
+                if (smooth != 0 && false)
+                {
+                    smoothValues.Enqueue(value);
+
+                    if (smoothValues.Count > smooth)
+                        smoothValues.Dequeue();
+
+                    float totalValues = 0;
+                    foreach(float v in smoothValues)
+                    {
+                        totalValues += v;
+                    }
+
+                    value = totalValues / smoothValues.Count;
+                }
+
                 return value;
             }
 
-            // -- update the offset value from UI
-            public void UpdateOffset(string _newOffset)
+            // -- update the smooth value from UI
+            public void UpdateSmooth(string _newSmooth)
             {
-                offset = UI.Offset();
-                char side = paramSide;
-                if(mirrored)
-                {
-                    if (side == 'L')
-                        side = 'R';
-                    else
-                        side = 'L';
-                }
+                smooth = UI.Smooth();
 
-                PlayerPrefs.SetFloat(paramName + side + "Offset", offset);
+                PlayerPrefs.SetInt(paramName + hand + "Smooth", smooth);
             }
         
             // -- reverse which side the parameters are being sent to
             public void MirrorMovement()
             {
-                if (paramSide == 'L')
-                {
-                    paramSide= 'R';
-                }
-                else
-                {
-                    paramSide = 'L';
-                }
-
                 mirrored = !mirrored;
+            }
+
+            public string ParameterName()
+            {
+                string result = "LeapHand";
+                if(defaultParam)
+                    result = "Hand";
+
+                if (hand == 0)
+                    result += "Left";
+                else
+                    result += "Right";
+
+                return result + paramName;
             }
         }
 
@@ -255,7 +226,7 @@ namespace Leap.Unity
 
         // -- UI prefabs
         public GameObject UILine;
-        public GameObject UILineWithOffset;
+        public GameObject UILineWithSmooth;
 
         void Start()
         {
@@ -265,38 +236,39 @@ namespace Leap.Unity
             parameters = new List<Parameter>();
 
             // -- create UI and parameters for all values
-            for(int h = 0; h < data.HandCount(); ++h)
+            for(int h = 0; h < 2; ++h)
             {
                 GameObject title = Instantiate(TitleText, Content.transform);
                 title.GetComponent<Text>().text = data.HandName(h) + " Side";
 
                 // -- set up arm parameters
-                parameters.Add(new Parameter(Parameter.paramType.UpperarmExtension, h, 0, 0, 1, "Upperarm Extension", Instantiate(UILine, Content), data, 1));
-                parameters.Add(new Parameter(Parameter.paramType.UpperarmRotation, h, 0, -180, 180, "Shoulder Rotation", Instantiate(UILineWithOffset, Content), data));
-                parameters.Add(new Parameter(Parameter.paramType.ForearmExtension, h, 0, 0, 1, "Forearm Extension", Instantiate(UILine, Content), data, 1));
-                parameters.Add(new Parameter(Parameter.paramType.ForearmRotation, h, 0, -180, 180, "Elbow Rotation", Instantiate(UILineWithOffset, Content), data));
-                parameters.Add(new Parameter(Parameter.paramType.WristRotationX, h, 0, 0, 360, "Wrist Rotation X", Instantiate(UILineWithOffset, Content), data, 180));
-                parameters.Add(new Parameter(Parameter.paramType.WristRotationY, h, 0, 0, 360, "Wrist Rotation Y", Instantiate(UILineWithOffset, Content), data, 180));
-                parameters.Add(new Parameter(Parameter.paramType.WristRotationZ, h, 0, 0, 360, "Wrist Rotation Z", Instantiate(UILineWithOffset, Content), data, 180));
-                parameters.Add(new Parameter(Parameter.paramType.WristPositionX, h, 0, -5, 5, "Wrist Position X", Instantiate(UILine, Content), data));
-                parameters.Add(new Parameter(Parameter.paramType.WristPositionY, h, 0, -5, 5, "Wrist Position Y", Instantiate(UILine, Content), data));
-                parameters.Add(new Parameter(Parameter.paramType.WristPositionZ, h, 0, -5, 5, "Wrist Position Z", Instantiate(UILine, Content), data));
+                parameters.Add(new Parameter(false, Parameter.paramType.UpperarmExtension, h, 1, 0, 1, "Upperarm Extension", Instantiate(UILine, Content), data));
+                parameters.Add(new Parameter(false, Parameter.paramType.UpperarmRotation, h, 0, -90, 90, "Shoulder Rotation", Instantiate(UILineWithSmooth, Content), data));
+                parameters.Add(new Parameter(false, Parameter.paramType.ForearmExtension, h, 1, 0, 1, "Forearm Extension", Instantiate(UILine, Content), data));
+                parameters.Add(new Parameter(false, Parameter.paramType.ForearmRotation, h, 0, -180, 180, "Elbow Rotation", Instantiate(UILineWithSmooth, Content), data));
+                parameters.Add(new Parameter(true, Parameter.paramType.AngleX, h, 0, -180, 180, "Hand Angle X", Instantiate(UILineWithSmooth, Content), data));
+                parameters.Add(new Parameter(false, Parameter.paramType.AngleY, h, 0, -180, 180, "Hand Angle Y", Instantiate(UILineWithSmooth, Content), data));
+                parameters.Add(new Parameter(true, Parameter.paramType.AngleZ, h, 0, -180, 180, "Hand Angle Z", Instantiate(UILineWithSmooth, Content), data));
+                parameters.Add(new Parameter(true, Parameter.paramType.PositionX, h, 0, -5, 5, "Hand Position X", Instantiate(UILine, Content), data));
+                parameters.Add(new Parameter(true, Parameter.paramType.PositionY, h, 0, -5, 5, "Hand Position Y", Instantiate(UILine, Content), data));
+                parameters.Add(new Parameter(true, Parameter.paramType.PositionZ, h, 0, -5, 5, "Hand Position Z", Instantiate(UILine, Content), data));
+                parameters.Add(new Parameter(true, Parameter.paramType.Found, h, 0, 0, 1, "Hand Found", Instantiate(UILine, Content), data));
 
                 // -- set up finger parameters
-                for (int f = 0; f < data.FingerCount(h); ++f)
+                for (int f = 0; f < 5; ++f)
                 {
                     string fingerTitle = data.FingerName(f);
 
-                    parameters.Add(new Parameter(Parameter.paramType.TotalRotation, h, f, -5, 30, fingerTitle + " Rotation", Instantiate(UILine, Content), data));
+                    parameters.Add(new Parameter(true, Parameter.paramType.TotalRotation, h, 0, 0, 1, fingerTitle, Instantiate(UILine, Content), data, f));
 
                     // -- thumb is a special case because it has more side rotation
                     if (f == 0)
                     {
-                        parameters.Add(new Parameter(Parameter.paramType.SideRotation, h, f, -15, 40, fingerTitle + " Side to Side", Instantiate(UILine, Content), data));
+                        parameters.Add(new Parameter(false, Parameter.paramType.SideRotation, h, 0, -1, 1, fingerTitle + " Spread", Instantiate(UILine, Content), data, f));
                     }
                     else
                     {
-                        parameters.Add(new Parameter(Parameter.paramType.SideRotation, h, f, -15, 15, fingerTitle + " Side to Side", Instantiate(UILine, Content), data));
+                        parameters.Add(new Parameter(false, Parameter.paramType.SideRotation, h, 0, -1, 1, fingerTitle + " Spread", Instantiate(UILine, Content), data, f));
                     }
                 }
             }
@@ -327,7 +299,8 @@ namespace Leap.Unity
             {
                 foreach (Parameter p in parameters)
                 {
-                    vtube.ParameterCreation(p.paramName + p.paramSide, p.title, p.min, p.max, p.def);
+                    if(!p.defaultParam)
+                        vtube.ParameterCreation(p.ParameterName(), p.title, p.min, p.max, p.def);
                 }
             }
             wasConnected = vtube.isConnected();
@@ -339,7 +312,7 @@ namespace Leap.Unity
 
                 if (vtube.isConnected() && value != -Mathf.Infinity)
                 {
-                    vtube.QueueInjectParameterData(p.paramName + p.paramSide, value);
+                    vtube.QueueInjectParameterData(p.ParameterName(), value);
                 }
 
             }
