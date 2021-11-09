@@ -89,15 +89,15 @@ public abstract class TrackingData : MonoBehaviour
     public abstract int FingerCount(int hand);
 
     // ===================================================================================
-    // The averaged rotation of the joints on one hand, min -5, max 30 (soft constraints)
+    // The averaged rotation of the joints on one hand, min 0, max 1 (soft constraints)
     // ===================================================================================
     public abstract float GetFingerRotation(int hand, int finger);
 
     // ===================================================================================
     // The side to side rotation of a finger, like when you spread your fingers
     // Returns an angle in degrees.
-    // For all fingers except thumb: min -15, max 15 (soft constraints)
-    // Thumb: min -15, max 40
+    // For all fingers except thumb: min -1, max 1 (soft constraints)
+    // Thumb: min -1, max 1
     // ===================================================================================
     public abstract float GetSideToSideRotation(int hand, int finger);
 
@@ -130,6 +130,11 @@ public abstract class TrackingData : MonoBehaviour
     // World position of wrist. min -5, max 5
     // ===================================================================================
     public abstract Vector3 GetWristPosition(int hand);
+
+    // ===================================================================================
+    // Whether a hand was found this frame
+    // ===================================================================================
+    public abstract bool HandTracked(int hand);
 
     // ===================================================================================
     // Shoulder position options

@@ -138,6 +138,9 @@ namespace Leap.Unity
                     case paramType.UpperarmRotation:
                         value = Data.GetUpperarmRotation(hand);
                         break;
+                    case paramType.Found:
+                        value = Data.HandTracked(hand) ? 0 : 1;
+                        break;
                 }
 
                 // -- mirror value if mirrored
