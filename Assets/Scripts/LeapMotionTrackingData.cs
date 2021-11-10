@@ -170,14 +170,15 @@ namespace Leap.Unity
                 hand.UpperarmExtension = (elbowProj.magnitude) / (elbowPos.magnitude);
 
                 // -- Upperarm rotation calculations
+                Quaternion shoulderRot = Quaternion.FromToRotation(Vector3.down, elbowPos);
                 float rawUpperarmRotation = Vector3.SignedAngle(Vector3.down, elbowProj, Vector3.forward);
                 hand.UpperarmRotation = rawUpperarmRotation;
                 if (leapHand.IsLeft)
                     hand.UpperarmRotation = -hand.UpperarmRotation;
 
-
                 Vector3 wristPos = leapHand.StabilizedPalmPosition.ToVector3() - elbowPos - center;
                 Vector3 wristProj = Vector3.ProjectOnPlane(wristPos, Vector3.forward);
+                Quaternion elbowRot = Quaternion.FromToRotation(Vector3.down, wristPos) * Quaternion.Inverse(shoulderRot);
 
                 // -- Forearm extension calculations
                 hand.ForearmExtension = (wristProj.magnitude) / (wristPos.magnitude);
@@ -191,7 +192,7 @@ namespace Leap.Unity
                 hand.WristPosition = HandPostion(leapHand);
 
                 // -- Wrist rotation calculations
-                hand.WristRotation = HandRotations(leapHand, center);
+                hand.WristRotation = HandRotations(leapHand, shoulderRot, elbowRot);
 
                 // -- Finger calculations
                 for (int f = 0; f < hand.Fingers.Count; ++f)
@@ -262,18 +263,18 @@ namespace Leap.Unity
             return result;
         }
 
-        Vector3 HandRotations(Leap.Hand leapHand, Vector3 center)
+        Vector3 HandRotations(Leap.Hand leapHand, Quaternion shoulder, Quaternion elbow)
         {
             Vector3 result;
-            
-            Vector3 elbowPos = leapHand.Arm.ElbowPosition.ToVector3() - center;
-            Quaternion shoulderRot = Quaternion.FromToRotation(Vector3.down, elbowPos);
-            Quaternion elbowRot = Quaternion.FromToRotation(shoulderRot * Vector3.down, leapHand.StabilizedPalmPosition.ToVector3());
 
-            Quaternion palm = leapHand.Rotation.ToQuaternion();
-            //palm = Quaternion.Inverse(shoulderRot) * Quaternion.Inverse(elbowRot) * palm;
-            result = palm.eulerAngles;
-            result = new Vector3((result.x + 180) % 360, (result.y + 180) % 360, (result.z + 180) % 360);
+            Quaternion localHand;
+            localHand = Quaternion.Inverse(shoulder) * Quaternion.Inverse(elbow) * leapHand.Rotation.ToQuaternion();
+            Vector3 palmDir = leapHand.PalmNormal.ToVector3();
+            result = Quaternion.LookRotation(palmDir, Vector3.up).eulerAngles;
+            result.x = Mathf.Abs(Vector3.SignedAngle(Vector3.forward, palmDir, Vector3.up));
+            result.z = Vector3.SignedAngle(Vector3.up, Vector3.ProjectOnPlane(localHand * Vector3.forward, Vector3.forward), Vector3.forward);
+            if (leapHand.IsRight)
+                result.y = (result.y + 180) % 360;
 
             return result;
         }
