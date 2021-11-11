@@ -246,7 +246,7 @@ namespace Leap.Unity
 
                 // -- set up arm parameters
                 parameters.Add(new Parameter(false, Parameter.paramType.UpperarmExtension, h, 1, 0, 1, "Upperarm Extension", Instantiate(UILine, Content), data));
-                parameters.Add(new Parameter(false, Parameter.paramType.UpperarmRotation, h, 0, -90, 90, "Shoulder Rotation", Instantiate(UILineWithSmooth, Content), data));
+                parameters.Add(new Parameter(false, Parameter.paramType.UpperarmRotation, h, 0, 0, 90, "Shoulder Rotation", Instantiate(UILineWithSmooth, Content), data));
                 parameters.Add(new Parameter(false, Parameter.paramType.ForearmExtension, h, 1, 0, 1, "Forearm Extension", Instantiate(UILine, Content), data));
                 parameters.Add(new Parameter(false, Parameter.paramType.ForearmRotation, h, 0, -180, 180, "Elbow Rotation", Instantiate(UILineWithSmooth, Content), data));
                 parameters.Add(new Parameter(true, Parameter.paramType.AngleX, h, 0, -180, 180, "Hand Local Angle X", Instantiate(UILineWithSmooth, Content), data));

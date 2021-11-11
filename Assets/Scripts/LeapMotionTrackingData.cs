@@ -46,7 +46,6 @@ namespace Leap.Unity
             public Vector3 WristPosition;
 
             public float ForearmExtension;
-            public Vector3 ForearmPrev;
             public float ForearmRotation;
 
             public float UpperarmExtension;
@@ -110,11 +109,6 @@ namespace Leap.Unity
                     name = "Right";
                 }
                 Hand hand = new Hand(name);
-
-                if (h == 0)
-                    hand.ForearmPrev = Vector3.left;
-                else
-                    hand.ForearmPrev = Vector3.right;
                 hands.Add(hand);
 
             }
@@ -170,29 +164,25 @@ namespace Leap.Unity
                 hand.UpperarmExtension = (elbowProj.magnitude) / (elbowPos.magnitude);
 
                 // -- Upperarm rotation calculations
-                Quaternion shoulderRot = Quaternion.FromToRotation(Vector3.down, elbowPos);
-                float rawUpperarmRotation = Vector3.SignedAngle(Vector3.down, elbowProj, Vector3.forward);
-                hand.UpperarmRotation = rawUpperarmRotation;
+                hand.UpperarmRotation = Vector3.SignedAngle(Vector3.down, elbowProj, Vector3.forward);
                 if (leapHand.IsLeft)
                     hand.UpperarmRotation = -hand.UpperarmRotation;
 
-                Vector3 wristPos = leapHand.StabilizedPalmPosition.ToVector3() - elbowPos - center;
+                Vector3 wristPos = leapHand.WristPosition.ToVector3() - elbowPos - center;
                 Vector3 wristProj = Vector3.ProjectOnPlane(wristPos, Vector3.forward);
-                Quaternion elbowRot = Quaternion.FromToRotation(Vector3.down, wristPos) * Quaternion.Inverse(shoulderRot);
 
                 // -- Forearm extension calculations
                 hand.ForearmExtension = (wristProj.magnitude) / (wristPos.magnitude);
 
                 // -- Forearm rotation calculation
-                Vector3 localForearm = Quaternion.Euler(0, 0, -rawUpperarmRotation) * wristProj;
-                hand.ForearmRotation = ElbowRotation(hand.ForearmRotation, hand.ForearmPrev, localForearm);
-                hand.ForearmPrev = localForearm;
+
+                hand.ForearmRotation = ElbowRotation(leapHand, hand.ForearmRotation, wristProj, hand.UpperarmRotation);
 
                 // -- Wrist position
                 hand.WristPosition = HandPostion(leapHand);
 
                 // -- Wrist rotation calculations
-                hand.WristRotation = HandRotations(leapHand, shoulderRot, elbowRot);
+                hand.WristRotation = HandRotations(leapHand);
 
                 // -- Finger calculations
                 for (int f = 0; f < hand.Fingers.Count; ++f)
@@ -263,7 +253,7 @@ namespace Leap.Unity
             return result;
         }
 
-        Vector3 HandRotations(Leap.Hand leapHand, Quaternion shoulder, Quaternion elbow)
+        Vector3 HandRotations(Leap.Hand leapHand)
         {
             Vector3 result = new Vector3();
 
@@ -283,11 +273,19 @@ namespace Leap.Unity
         }
 
         // -- Forearm rotation calculation
-        float ElbowRotation(float previous, Vector3 forearmPrevious, Vector3 localForearm)
+        float ElbowRotation(Leap.Hand leapHand, float previousRotation, Vector3 forearm, float shoulderRotation)
         {
-            float result = previous;
-
-            result += Vector3.SignedAngle(forearmPrevious, localForearm, Vector3.forward);
+            float result;
+            if (leapHand.IsLeft)
+            {
+                result = (Mathf.Atan2(-forearm.y, -forearm.x) * Mathf.Rad2Deg);
+                result = shoulderRotation - result;
+            }
+            else
+            {
+                result = (Mathf.Atan2(forearm.y, forearm.x) * Mathf.Rad2Deg);
+                result = result - shoulderRotation;
+            }
 
             return result;
         }
