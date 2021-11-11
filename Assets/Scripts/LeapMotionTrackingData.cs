@@ -234,9 +234,9 @@ namespace Leap.Unity
 
             // -- clamp to 0 - 1
             if (leapFinger.Type == Leap.Finger.FingerType.TYPE_THUMB)
-                result = Map(result, 0, 20, 0, 1);
+                result = Map(result, 0, 20, 1, 0);
             else
-                result = Map(result, 0, 30, 0, 1);
+                result = Map(result, 0, 30, 1, 0);
             return result;
         }
 
@@ -265,16 +265,14 @@ namespace Leap.Unity
 
         Vector3 HandRotations(Leap.Hand leapHand, Quaternion shoulder, Quaternion elbow)
         {
-            Vector3 result;
+            Vector3 result = new Vector3();
 
             Quaternion localHand;
-            localHand = Quaternion.Inverse(shoulder) * Quaternion.Inverse(elbow) * leapHand.Rotation.ToQuaternion();
-            Vector3 palmDir = leapHand.PalmNormal.ToVector3();
-            result = Quaternion.LookRotation(palmDir, Vector3.up).eulerAngles;
-            result.x = Mathf.Abs(Vector3.SignedAngle(Vector3.forward, palmDir, Vector3.up));
-            result.z = Vector3.SignedAngle(Vector3.up, Vector3.ProjectOnPlane(localHand * Vector3.forward, Vector3.forward), Vector3.forward);
-            if (leapHand.IsRight)
-                result.y = (result.y + 180) % 360;
+            localHand = leapHand.Rotation.ToQuaternion();
+            Vector3 angles = localHand.eulerAngles;
+            result.x = ((angles.z + 180) % 360) - 180;
+            result.y = ((angles.x + 180) % 360) - 180;
+            result.z = ((angles.y + 180) % 360) - 180;
 
             return result;
         }

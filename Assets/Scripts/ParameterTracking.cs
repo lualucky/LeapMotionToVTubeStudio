@@ -249,9 +249,9 @@ namespace Leap.Unity
                 parameters.Add(new Parameter(false, Parameter.paramType.UpperarmRotation, h, 0, -90, 90, "Shoulder Rotation", Instantiate(UILineWithSmooth, Content), data));
                 parameters.Add(new Parameter(false, Parameter.paramType.ForearmExtension, h, 1, 0, 1, "Forearm Extension", Instantiate(UILine, Content), data));
                 parameters.Add(new Parameter(false, Parameter.paramType.ForearmRotation, h, 0, -180, 180, "Elbow Rotation", Instantiate(UILineWithSmooth, Content), data));
-                parameters.Add(new Parameter(true, Parameter.paramType.AngleX, h, 0, -180, 180, "Hand Angle X", Instantiate(UILineWithSmooth, Content), data));
-                parameters.Add(new Parameter(false, Parameter.paramType.AngleY, h, 0, -180, 180, "Hand Angle Y", Instantiate(UILineWithSmooth, Content), data));
-                parameters.Add(new Parameter(true, Parameter.paramType.AngleZ, h, 0, -180, 180, "Hand Angle Z", Instantiate(UILineWithSmooth, Content), data));
+                parameters.Add(new Parameter(true, Parameter.paramType.AngleX, h, 0, -180, 180, "Hand Local Angle X", Instantiate(UILineWithSmooth, Content), data));
+                parameters.Add(new Parameter(false, Parameter.paramType.AngleY, h, 0, -180, 180, "Hand Local Angle Y", Instantiate(UILineWithSmooth, Content), data));
+                parameters.Add(new Parameter(true, Parameter.paramType.AngleZ, h, 0, -180, 180, "Hand Local Angle Z", Instantiate(UILineWithSmooth, Content), data));
                 parameters.Add(new Parameter(true, Parameter.paramType.PositionX, h, 0, -5, 5, "Hand Position X", Instantiate(UILine, Content), data));
                 parameters.Add(new Parameter(true, Parameter.paramType.PositionY, h, 0, -5, 5, "Hand Position Y", Instantiate(UILine, Content), data));
                 parameters.Add(new Parameter(true, Parameter.paramType.PositionZ, h, 0, -5, 5, "Hand Position Z", Instantiate(UILine, Content), data));
