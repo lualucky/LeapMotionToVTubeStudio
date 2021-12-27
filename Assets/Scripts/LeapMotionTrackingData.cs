@@ -278,11 +278,13 @@ namespace Leap.Unity
             float result;
             if (leapHand.IsLeft)
             {
-                result = (Mathf.Atan2(-forearm.y, -forearm.x) * Mathf.Rad2Deg);
-                result = shoulderRotation - result;
+                // -- I have no idea why this works but it seems to
+                result = -(Mathf.Atan2(-forearm.y, -forearm.x) * Mathf.Rad2Deg);
+                //result = shoulderRotation - result;
             }
             else
             {
+
                 result = (Mathf.Atan2(forearm.y, forearm.x) * Mathf.Rad2Deg);
                 result = result - shoulderRotation;
             }

@@ -32,7 +32,7 @@ namespace Leap.Unity
 
             public bool defaultParam;
             public paramType type;
-            public int hand;
+            int hand;
             public int finger;
             public string paramName;
             public string title;
@@ -139,7 +139,7 @@ namespace Leap.Unity
                         value = Data.GetUpperarmRotation(hand);
                         break;
                     case paramType.Found:
-                        value = Data.HandTracked(hand) ? 0 : 1;
+                        value = Data.HandTracked(hand) ? 1 : 0;
                         break;
                 }
 
@@ -148,12 +148,7 @@ namespace Leap.Unity
                 {
                     switch (type)
                     {
-                        case paramType.AngleZ:
-                            value = (2 * def) - value;
-                            break;
                         case paramType.AngleX:
-                        //case paramType.ForearmRotation:
-                        case paramType.UpperarmRotation:
                             value = -value;
                             break;
                     }
@@ -204,26 +199,48 @@ namespace Leap.Unity
 
             public string ParameterName()
             {
-                string result = "LeapHand";
+                string result = "Hand";
                 if(defaultParam)
                     result = "Hand";
 
-                if (hand == 0)
+                if ((hand == 0 && !mirrored) || (hand != 0 && mirrored))
                     result += "Left";
                 else
                     result += "Right";
 
                 return result + paramName;
             }
+
+            public int Hand() {
+                if (mirrored)
+                    if (hand == 0)
+                        return 1;
+                    else
+                        return 0;
+                else
+                    return hand;
+            }
+        }
+
+        enum trackingLost
+        {
+            StayAtPose,
+            Default,
+            WaitDefault
         }
 
         TrackingData data;
         VTubeStudio vtube;
-        List<Parameter> parameters;
+        Dictionary<string, Parameter> parameters;
         bool wasConnected = false;
+
+        trackingLost trackingResponse;
+        bool[] trackingPrev = new bool[2];
+        bool[] tracking = new bool[2];
 
         // -- unique UI settings
         public Toggle MirrorMovementToggle;
+        public Dropdown TrackingLostDropdown;
         public GameObject TitleText;
         public Transform Content;
 
@@ -236,7 +253,7 @@ namespace Leap.Unity
             data = GetComponent<LeapMotionTrackingData>();
             vtube = GetComponent<VTubeStudio>();
 
-            parameters = new List<Parameter>();
+            parameters = new Dictionary<string, Parameter>();
 
             // -- create UI and parameters for all values
             for(int h = 0; h < 2; ++h)
@@ -245,33 +262,47 @@ namespace Leap.Unity
                 title.GetComponent<Text>().text = data.HandName(h) + " Side";
 
                 // -- set up arm parameters
-                parameters.Add(new Parameter(false, Parameter.paramType.UpperarmExtension, h, 1, 0, 1, "Upperarm Extension", Instantiate(UILine, Content), data));
-                parameters.Add(new Parameter(false, Parameter.paramType.UpperarmRotation, h, 0, 0, 90, "Shoulder Rotation", Instantiate(UILineWithSmooth, Content), data));
-                parameters.Add(new Parameter(false, Parameter.paramType.ForearmExtension, h, 1, 0, 1, "Forearm Extension", Instantiate(UILine, Content), data));
-                parameters.Add(new Parameter(false, Parameter.paramType.ForearmRotation, h, 0, -180, 180, "Elbow Rotation", Instantiate(UILineWithSmooth, Content), data));
-                parameters.Add(new Parameter(true, Parameter.paramType.AngleX, h, 0, -180, 180, "Hand Local Angle X", Instantiate(UILineWithSmooth, Content), data));
-                parameters.Add(new Parameter(false, Parameter.paramType.AngleY, h, 0, -180, 180, "Hand Local Angle Y", Instantiate(UILineWithSmooth, Content), data));
-                parameters.Add(new Parameter(true, Parameter.paramType.AngleZ, h, 0, -180, 180, "Hand Local Angle Z", Instantiate(UILineWithSmooth, Content), data));
-                parameters.Add(new Parameter(true, Parameter.paramType.PositionX, h, 0, -5, 5, "Hand Position X", Instantiate(UILine, Content), data));
-                parameters.Add(new Parameter(true, Parameter.paramType.PositionY, h, 0, -5, 5, "Hand Position Y", Instantiate(UILine, Content), data));
-                parameters.Add(new Parameter(true, Parameter.paramType.PositionZ, h, 0, -5, 5, "Hand Position Z", Instantiate(UILine, Content), data));
-                parameters.Add(new Parameter(true, Parameter.paramType.Found, h, 0, 0, 1, "Hand Found", Instantiate(UILine, Content), data));
+                parameters.Add("Upperarm Extension" + h,
+                    new Parameter(false, Parameter.paramType.UpperarmExtension, h, 1, 0, 1, "Upperarm Extension", Instantiate(UILine, Content), data));
+                parameters.Add("Shoulder Rotation" + h,
+                    new Parameter(false, Parameter.paramType.UpperarmRotation, h, 0, 0, 90, "Shoulder Rotation", Instantiate(UILineWithSmooth, Content), data));
+                parameters.Add("Forearm Extension" + h,
+                    new Parameter(false, Parameter.paramType.ForearmExtension, h, 1, 0, 1, "Forearm Extension", Instantiate(UILine, Content), data));
+                parameters.Add("Elbow Rotation" + h,
+                    new Parameter(false, Parameter.paramType.ForearmRotation, h, 0, -180, 180, "Elbow Rotation", Instantiate(UILineWithSmooth, Content), data));
+                parameters.Add("Hand Local Angle X" + h,
+                    new Parameter(true, Parameter.paramType.AngleX, h, 0, -180, 180, "Hand Local Angle X", Instantiate(UILineWithSmooth, Content), data));
+                parameters.Add("Hand Local Angle Y" + h,
+                    new Parameter(false, Parameter.paramType.AngleY, h, 0, -180, 180, "Hand Local Angle Y", Instantiate(UILineWithSmooth, Content), data));
+                parameters.Add("Hand Local Angle Z" + h,
+                    new Parameter(true, Parameter.paramType.AngleZ, h, 0, -180, 180, "Hand Local Angle Z", Instantiate(UILineWithSmooth, Content), data));
+                parameters.Add("Hand Position X" + h,
+                    new Parameter(true, Parameter.paramType.PositionX, h, 0, -5, 5, "Hand Position X", Instantiate(UILine, Content), data));
+                parameters.Add("Hand Position Y" + h,
+                    new Parameter(true, Parameter.paramType.PositionY, h, 0, -5, 5, "Hand Position Y", Instantiate(UILine, Content), data));
+                parameters.Add("Hand Position Z" + h,
+                    new Parameter(true, Parameter.paramType.PositionZ, h, 0, -5, 5, "Hand Position Z", Instantiate(UILine, Content), data));
+                parameters.Add("Hand Found" + h,
+                    new Parameter(true, Parameter.paramType.Found, h, 0, 0, 1, "Hand Found", Instantiate(UILine, Content), data));
 
                 // -- set up finger parameters
                 for (int f = 0; f < 5; ++f)
                 {
                     string fingerTitle = data.FingerName(f);
 
-                    parameters.Add(new Parameter(true, Parameter.paramType.TotalRotation, h, 0, 0, 1, fingerTitle, Instantiate(UILine, Content), data, f));
+                    parameters.Add(fingerTitle + h,
+                        new Parameter(true, Parameter.paramType.TotalRotation, h, 0, 0, 1, fingerTitle, Instantiate(UILine, Content), data, f));
 
                     // -- thumb is a special case because it has more side rotation
                     if (f == 0)
                     {
-                        parameters.Add(new Parameter(false, Parameter.paramType.SideRotation, h, 0, -1, 1, fingerTitle + " Spread", Instantiate(UILine, Content), data, f));
+                        parameters.Add(fingerTitle + "Side" + h, 
+                            new Parameter(false, Parameter.paramType.SideRotation, h, 0, -1, 1, fingerTitle + " Spread", Instantiate(UILine, Content), data, f));
                     }
                     else
                     {
-                        parameters.Add(new Parameter(false, Parameter.paramType.SideRotation, h, 0, -1, 1, fingerTitle + " Spread", Instantiate(UILine, Content), data, f));
+                        parameters.Add(fingerTitle + "Side" + h, 
+                            new Parameter(false, Parameter.paramType.SideRotation, h, 0, -1, 1, fingerTitle + " Spread", Instantiate(UILine, Content), data, f));
                     }
                 }
             }
@@ -279,20 +310,31 @@ namespace Leap.Unity
             if (PlayerPrefs.HasKey("MirrorMovement"))
                 MirrorMovementToggle.isOn = PlayerPrefs.GetInt("MirrorMovement") > 0;
 
-            if (MirrorMovementToggle.isOn)
-                MirrorMovement(MirrorMovementToggle.isOn);
+            if (PlayerPrefs.HasKey("TrackingLostResponse")) {
+                TrackingLostDropdown.value = PlayerPrefs.GetInt("TrackingLostResponse");
+            }
+
+            MirrorMovement(MirrorMovementToggle.isOn);
+            SetTrackingLostResponse(TrackingLostDropdown.value);
 
             MirrorMovementToggle.onValueChanged.AddListener(MirrorMovement);
+            TrackingLostDropdown.onValueChanged.AddListener(SetTrackingLostResponse);
         }
 
         void MirrorMovement(bool value)
         {
             PlayerPrefs.SetInt("MirrorMovement", value ? 1 : 0);
 
-            foreach (Parameter p in parameters)
+            foreach (Parameter p in parameters.Values)
             {
                 p.MirrorMovement();
             }
+        }
+
+        public void SetTrackingLostResponse(int value)
+        {
+            PlayerPrefs.SetInt("TrackingLostResponse", value);
+            trackingResponse = (trackingLost)value;
         }
 
         void FixedUpdate()
@@ -300,7 +342,7 @@ namespace Leap.Unity
             // -- just connected for first time, create parameters for vtube studio
             if(vtube.isConnected() && !wasConnected)
             {
-                foreach (Parameter p in parameters)
+                foreach (Parameter p in parameters.Values)
                 {
                     if(!p.defaultParam)
                         vtube.ParameterCreation(p.ParameterName(), p.title, p.min, p.max, p.def);
@@ -308,16 +350,45 @@ namespace Leap.Unity
             }
             wasConnected = vtube.isConnected();
 
-            // -- update and send parameters
-            foreach (Parameter p in parameters)
+
+            for(int h = 0; h < 2; h++)
             {
-                float value = p.UpdateValue(data);
+                Parameter found = parameters["Hand Found" + h];
+                found.UpdateValue(data);
+                trackingPrev[h] = tracking[h];
+                tracking[h] = found.value > 0;
+            }
 
-                if (vtube.isConnected() && value != -Mathf.Infinity)
+            // -- update and send parameters
+            foreach (Parameter p in parameters.Values)
+            {
+                bool update = true;
+                /*if (!tracking[p.Hand()] && trackingResponse > 0)
                 {
-                    vtube.QueueInjectParameterData(p.ParameterName(), value);
-                }
+                    switch(trackingResponse)
+                    {
+                        // -- if we just lost tracking, immediately set weight to 0
+                        case trackingLost.Default:
+                            if(trackingPrev[p.Hand()])
+                                vtube.QueueInjectParameterData(p.ParameterName(), p.def, 0);
+                            update = false;
+                            break;
+                        case trackingLost.WaitDefault:
+                            update = false;
+                            break;
+                        default:
+                            break;
+                    }
+                }*/
 
+                if (update) {
+                    float value = p.UpdateValue(data);
+
+                    if (vtube.isConnected() && value != -Mathf.Infinity)
+                    {
+                        vtube.QueueInjectParameterData(p.ParameterName(), value);
+                    }
+                }
             }
 
             if (vtube.isConnected())
