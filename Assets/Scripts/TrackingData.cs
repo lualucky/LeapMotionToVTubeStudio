@@ -245,6 +245,14 @@ public abstract class TrackingData : MonoBehaviour
     }
 
     // ===================================================================================
+    // Distance between hands
+    // ===================================================================================
+    public float HandDistance()
+    {
+        return (hands[0].WristPosition - hands[1].WristPosition).magnitude;
+    }
+
+    // ===================================================================================
     // Shoulder position options
     // ===================================================================================
     public virtual void SetShoulderHeight()

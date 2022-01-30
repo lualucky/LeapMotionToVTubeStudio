@@ -2034,7 +2034,7 @@ GameObject:
   - component: {fileID: 328668753}
   - component: {fileID: 328668752}
   m_Layer: 5
-  m_Name: Dropdown
+  m_Name: LP Mode Dropdown
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2314,7 +2314,7 @@ GameObject:
   - component: {fileID: 375148990}
   - component: {fileID: 375148991}
   m_Layer: 5
-  m_Name: Slider
+  m_Name: RotZ Slider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2387,7 +2387,7 @@ MonoBehaviour:
   m_Direction: 0
   m_MinValue: -180
   m_MaxValue: 180
-  m_WholeNumbers: 0
+  m_WholeNumbers: 1
   m_Value: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -6330,7 +6330,7 @@ GameObject:
   - component: {fileID: 1107292634}
   - component: {fileID: 1107292633}
   m_Layer: 5
-  m_Name: Text
+  m_Name: LeapMotion Setting Text
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -6718,7 +6718,7 @@ GameObject:
   - component: {fileID: 1150502994}
   - component: {fileID: 1150502995}
   m_Layer: 5
-  m_Name: Slider
+  m_Name: PosY Slider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -8335,7 +8335,7 @@ GameObject:
   - component: {fileID: 1399078415}
   - component: {fileID: 1399078416}
   m_Layer: 5
-  m_Name: Slider
+  m_Name: PosZ Slider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -9375,7 +9375,13 @@ MonoBehaviour:
   Width: {fileID: 22510082}
   Depth: {fileID: 1804813289}
   provider: {fileID: 769854564}
-  LeapOptions: {fileID: 328668752}
+  LeapPlacementOptions: {fileID: 328668752}
+  PosXSlider: {fileID: 1782154217}
+  PosYSlider: {fileID: 1150502995}
+  PosZSlider: {fileID: 1399078416}
+  RotXSlider: {fileID: 2074815474}
+  RotYSlider: {fileID: 1787849004}
+  RotZSlider: {fileID: 375148991}
 --- !u!4 &1632529911
 Transform:
   m_ObjectHideFlags: 0
@@ -10828,8 +10834,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1882510385}
   m_HandleRect: {fileID: 1882510384}
   m_Direction: 2
-  m_Value: 1.0000007
-  m_Size: 0.89697164
+  m_Value: 1
+  m_Size: 0.92632425
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -10882,7 +10888,7 @@ GameObject:
   - component: {fileID: 1782154216}
   - component: {fileID: 1782154217}
   m_Layer: 5
-  m_Name: Slider
+  m_Name: PosX Slider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -11111,7 +11117,7 @@ GameObject:
   - component: {fileID: 1787849003}
   - component: {fileID: 1787849004}
   m_Layer: 5
-  m_Name: Slider
+  m_Name: RotY Slider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -11184,7 +11190,7 @@ MonoBehaviour:
   m_Direction: 0
   m_MinValue: -180
   m_MaxValue: 180
-  m_WholeNumbers: 0
+  m_WholeNumbers: 1
   m_Value: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -12543,7 +12549,7 @@ GameObject:
   - component: {fileID: 2074815473}
   - component: {fileID: 2074815474}
   m_Layer: 5
-  m_Name: Slider
+  m_Name: RotX Slider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -12616,7 +12622,7 @@ MonoBehaviour:
   m_Direction: 0
   m_MinValue: -180
   m_MaxValue: 180
-  m_WholeNumbers: 0
+  m_WholeNumbers: 1
   m_Value: 0
   m_OnValueChanged:
     m_PersistentCalls:

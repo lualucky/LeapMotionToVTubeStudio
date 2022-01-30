@@ -34,7 +34,15 @@ public override string FingerName(int finger)
 
     public LeapProvider provider;
 
-    public Dropdown LeapOptions;
+    public Dropdown LeapPlacementOptions;
+
+    public Slider PosXSlider;
+    public Slider PosYSlider;
+    public Slider PosZSlider;
+
+    public Slider RotXSlider;
+    public Slider RotYSlider;
+    public Slider RotZSlider;
 
     protected override void Start()
     {
@@ -42,19 +50,9 @@ public override string FingerName(int finger)
 
         hands = new List<Hand>();
 
-        for(int i = 0; i <= (int)Leap.TestHandFactory.TestHandPose.ScreenTop; ++i)
-        {
-            LeapOptions.options.Add(new Dropdown.OptionData(((Leap.TestHandFactory.TestHandPose)i).ToString()));
-        }
-
-        int val = (int)provider.editTimePose;
-        if (PlayerPrefs.HasKey("leapMode"))
-            val = PlayerPrefs.GetInt("leapMode");
-        LeapOptions.value = val;
-
         // -- init hands
         // -- left = 0, right = 1, always
-        for(int h = 0; h < 2; ++h)
+        for (int h = 0; h < 2; ++h)
         {
             string name = "Left";
             if (h == 1)
@@ -66,7 +64,55 @@ public override string FingerName(int finger)
 
         }
 
-        LeapOptions.onValueChanged.AddListener(delegate { SetLeapMode(); });
+        for (int i = 0; i <= (int)Leap.TestHandFactory.TestHandPose.ScreenTop; ++i)
+        {
+            LeapPlacementOptions.options.Add(new Dropdown.OptionData(((Leap.TestHandFactory.TestHandPose)i).ToString()));
+        }
+
+        int val = (int)provider.editTimePose;
+        if (PlayerPrefs.HasKey("leapMode"))
+            val = PlayerPrefs.GetInt("leapMode");
+        LeapPlacementOptions.value = val;
+
+        if (PlayerPrefs.HasKey("leapPosX"))
+        {
+            PosXSlider.value = PlayerPrefs.GetFloat("leapPosX");
+            SetLeapPosX();
+        }
+        if (PlayerPrefs.HasKey("leapPosY"))
+        {
+            PosYSlider.value = PlayerPrefs.GetFloat("leapPosY");
+            SetLeapPosY();
+        }
+        if (PlayerPrefs.HasKey("leapPosZ"))
+        {
+            PosZSlider.value = PlayerPrefs.GetFloat("leapPosZ");
+            SetLeapPosZ();
+        }
+
+        if (PlayerPrefs.HasKey("leapRotX"))
+        {
+            RotXSlider.value = PlayerPrefs.GetFloat("leapRotX");
+            SetLeapRotX();
+        }
+        if (PlayerPrefs.HasKey("leapRotY"))
+        {
+            RotYSlider.value = PlayerPrefs.GetFloat("leapRotY");
+            SetLeapRotY();
+        }
+        if (PlayerPrefs.HasKey("leapRotZ"))
+        {
+            RotZSlider.value = PlayerPrefs.GetFloat("leapRotZ");
+            SetLeapRotZ();
+        }
+
+        LeapPlacementOptions.onValueChanged.AddListener(delegate { SetLeapMode(); });
+        PosXSlider.onValueChanged.AddListener(delegate { SetLeapPosX(); });
+        PosYSlider.onValueChanged.AddListener(delegate { SetLeapPosY(); });
+        PosZSlider.onValueChanged.AddListener(delegate { SetLeapPosZ(); });
+        RotXSlider.onValueChanged.AddListener(delegate { SetLeapRotX(); });
+        RotYSlider.onValueChanged.AddListener(delegate { SetLeapRotY(); });
+        RotZSlider.onValueChanged.AddListener(delegate { SetLeapRotZ(); });
     }
 
     // ===================================================================================
@@ -258,6 +304,63 @@ public override string FingerName(int finger)
     // ===================================================================================
     public void SetLeapMode()
     {
-        PlayerPrefs.SetInt("leapMode", LeapOptions.value);
+        PlayerPrefs.SetInt("leapMode", LeapPlacementOptions.value);
+    }
+
+    // ===================================================================================
+    // Set Leap Motion Location
+    // ===================================================================================
+    public void SetLeapPosX()
+    {
+        float v = PosXSlider.value;
+        Vector3 pos = provider.gameObject.transform.position;
+        pos.x = v;
+        provider.gameObject.transform.position = pos;
+        PlayerPrefs.SetFloat("leapPosX", v);
+    }
+
+    public void SetLeapPosY()
+    {
+        float v = PosYSlider.value;
+        Vector3 pos = provider.gameObject.transform.position;
+        pos.y = v;
+        provider.gameObject.transform.position = pos;
+        PlayerPrefs.SetFloat("leapPosY", v);
+    }
+
+    public void SetLeapPosZ()
+    {
+        float v = PosZSlider.value;
+        Vector3 pos = provider.gameObject.transform.position;
+        pos.z = v;
+        provider.gameObject.transform.position = pos;
+        PlayerPrefs.SetFloat("leapPosZ", v);
+    }
+
+    public void SetLeapRotX()
+    {
+        float v = RotXSlider.value;
+        Vector3 rot = provider.gameObject.transform.rotation.eulerAngles;
+        rot.x = v;
+        provider.gameObject.transform.rotation = Quaternion.Euler(rot);
+        PlayerPrefs.SetFloat("leapRotX", v);
+    }
+
+    public void SetLeapRotY()
+    {
+        float v = RotYSlider.value;
+        Vector3 rot = provider.gameObject.transform.rotation.eulerAngles;
+        rot.y = v;
+        provider.gameObject.transform.rotation = Quaternion.Euler(rot);
+        PlayerPrefs.SetFloat("leapRotY", v);
+    }
+
+    public void SetLeapRotZ()
+    {
+        float v = RotZSlider.value;
+        Vector3 rot = provider.gameObject.transform.rotation.eulerAngles;
+        rot.z = v;
+        provider.gameObject.transform.rotation = Quaternion.Euler(rot);
+        PlayerPrefs.SetFloat("leapRotZ", v);
     }
 }

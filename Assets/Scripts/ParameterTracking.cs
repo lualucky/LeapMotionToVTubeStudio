@@ -27,6 +27,7 @@ public class ParameterTracking : MonoBehaviour
             UpperarmRotation,
             Found,
             Open,
+            Distance,
         }
 
         public bool defaultParam;
@@ -147,7 +148,10 @@ public class ParameterTracking : MonoBehaviour
                     value = Data.HandTracked(hand) ? 1 : 0;
                     break;
                 case paramType.Open:
-                    value = Data.HandTracked(hand) ? 1 : 0;
+                    value = Data.HandOpen(hand);
+                    break;
+                case paramType.Distance:
+                    value = Data.HandDistance();
                     break;
             }
 
@@ -213,13 +217,16 @@ public class ParameterTracking : MonoBehaviour
 
             if (Hand() == 0)
                 result += "Left";
-            else
+            else if (Hand() == 1)
                 result += "Right";
 
             return result + paramName;
         }
 
         public int Hand() {
+            if (hand < 0)
+                return hand;
+
             if (mirrored)
                 return hand == 1 ? 0 : 1;
             else
@@ -301,6 +308,8 @@ public class ParameterTracking : MonoBehaviour
                 new Parameter(true, Parameter.paramType.PositionZ, h, 0, -5, 5, "Hand Position Z", Instantiate(UILine, Content), data));
             parameters.Add("Hand Found" + h,
                 new Parameter(true, Parameter.paramType.Found, h, 0, 0, 1, "Hand Found", Instantiate(UILine, Content), data));
+            parameters.Add("Hand Open" + h,
+                new Parameter(true, Parameter.paramType.Open, h, 0, 0, 1, "Hand Open", Instantiate(UILine, Content), data));
 
             // -- set up finger parameters
             for (int f = 0; f < 5; ++f)
@@ -323,6 +332,9 @@ public class ParameterTracking : MonoBehaviour
                 }
             }
         }
+
+        parameters.Add("Hand Distance",
+                new Parameter(true, Parameter.paramType.Distance, -1, 0, 0, 10, "Hand Distance", Instantiate(UILine, Content), data));
 
         if (PlayerPrefs.HasKey("MirrorMovement"))
             MirrorMovementToggle.isOn = PlayerPrefs.GetInt("MirrorMovement") > 0;
@@ -372,17 +384,24 @@ public class ParameterTracking : MonoBehaviour
             Parameter found = parameters["Hand Found" + h];
             int handidx = found.RawHand();
 
-            found.UpdateValue(data);
-            trackingPrev[handidx] = tracking[handidx];
-            tracking[handidx] = found.value > 0;
+            if (handidx >= 0)
+            {
+                found.UpdateValue(data);
+                trackingPrev[handidx] = tracking[handidx];
+                tracking[handidx] = found.value > 0;
+            }
         }
 
         // -- update and send parameters
         foreach (Parameter p in parameters.Values)
         {
-            bool send = !(!tracking[p.RawHand()] && trackingResponse != trackingLost.StayAtPose);
+            bool send;
+            if(p.RawHand() >= 0)
+                send = !(!tracking[p.RawHand()] && trackingResponse != trackingLost.StayAtPose);
+            else
+                send = !(!(tracking[0] && tracking[1]) && trackingResponse != trackingLost.StayAtPose);
 
-            if(!send && trackingResponse == trackingLost.Default && trackingPrev[p.RawHand()])
+            if (!send && trackingResponse == trackingLost.Default && trackingPrev[p.RawHand()])
                 vtube.QueueInjectParameterData(p.ParameterName(), p.def, 0);
 
             if(send)
