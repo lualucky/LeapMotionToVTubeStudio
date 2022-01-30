@@ -324,7 +324,7 @@ MonoBehaviour:
       m_Image: {fileID: 0}
     - m_Text: Go back to default
       m_Image: {fileID: 0}
-    - m_Text: Wait 1 second, then go back to default
+    - m_Text: Default VTube Studio behavior
       m_Image: {fileID: 0}
   m_OnValueChanged:
     m_PersistentCalls:
@@ -10828,8 +10828,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1882510385}
   m_HandleRect: {fileID: 1882510384}
   m_Direction: 2
-  m_Value: 1
-  m_Size: 0.91512805
+  m_Value: 1.0000007
+  m_Size: 0.89697164
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:

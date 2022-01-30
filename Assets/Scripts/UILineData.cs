@@ -11,6 +11,8 @@ public class UILineData : MonoBehaviour
     public InputField SmoothInput;
     public Text ValueText;
 
+    public bool ParamEnabled;
+
     public List<GameObject> ToggleObjects;
 
     private void Start()
@@ -21,6 +23,8 @@ public class UILineData : MonoBehaviour
         }
 
         EnableToggle.onValueChanged.AddListener(Toggle);
+
+        ParamEnabled = EnableToggle.isOn;
     }
 
     public void Toggle(bool enable)
@@ -31,6 +35,8 @@ public class UILineData : MonoBehaviour
         {
             obj.SetActive(enable);
         }
+
+        ParamEnabled = enable;
     }
 
     public void SetName(string name)

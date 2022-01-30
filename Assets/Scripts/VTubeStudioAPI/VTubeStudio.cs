@@ -53,8 +53,11 @@ public class VTubeStudio : MonoBehaviour
     void WebsocketError(string e)
     {
         Debug.LogError(e);
-        ConnectText.color = Color.red;
-        ConnectText.text = "Can't find VTS. Check Port.";
+        if (ConnectText)
+        {
+            ConnectText.color = Color.red;
+            ConnectText.text = "Can't find VTS. Check API settings in VTS.";
+        }
     }
     void WebsocketClose()
     {
@@ -62,6 +65,11 @@ public class VTubeStudio : MonoBehaviour
         Debug.Log("Websocket Closed");
         if (ConnectButton)
             ConnectButton.interactable = true;
+        if(ConnectText)
+        {
+            ConnectText.color = Color.black;
+            ConnectText.text = "Not Connected";
+        }
     }
     void WebsocketResponse(byte[] m)
     {
@@ -119,8 +127,11 @@ public class VTubeStudio : MonoBehaviour
     {
         if (ConnectButton)
             ConnectButton.interactable = false;
-        ConnectText.color = Color.black;
-        ConnectText.text = "Not Connected";
+        if (ConnectText)
+        {
+            ConnectText.color = Color.black;
+            ConnectText.text = "Not Connected";
+        }
 
         webSocket = new WebSocket(URI);
         webSocket.OnMessage += (bytes) =>
@@ -240,8 +251,14 @@ public class VTubeStudio : MonoBehaviour
                     Debug.Log("VTube Studio Authenticated");
                     connected = true;
                     onVTubeStudioConnected();
-                    ConnectText.text = "Successfully Connected";
-                    ConnectButton.interactable = false;
+                    if (ConnectText)
+                    {
+                        ConnectText.text = "Successfully Connected";
+                    }
+                    if (ConnectButton)
+                    {
+                        ConnectButton.interactable = false;
+                    }
                 }
                 else
                 {

@@ -1,12 +1,66 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
-
+using System.Collections.Generic;
 
 // =======================================================================================
 // An abstract class that can be used to add a different source for hand tracking data
 // =======================================================================================
 public abstract class TrackingData : MonoBehaviour
 {
+    // Helper function to remap values to standard ranges
+    static public float Map(float x, float x1, float x2, float y1, float y2)
+    {
+        var m = (y2 - y1) / (x2 - x1);
+        var c = y1 - m * x1;
+
+        return m * x + c;
+    }
+
+    // -----------------------------------------------------------------------------------
+    // All information for a hand
+    // -----------------------------------------------------------------------------------
+    protected class Hand
+    {
+        public string Name;
+        public List<Finger> Fingers;
+        public Vector3 WristRotPrev;
+        public Vector3 WristRotation;
+        public Vector3 WristRotationLocal;
+        public Vector3 WristPosition;
+
+        public float ForearmExtension;
+        public float ForearmRotation;
+
+        public float UpperarmExtension;
+        public Vector3 UpperarmPrev;
+        public float UpperarmRotation;
+
+        public bool Found;
+
+        public Hand(string _name)
+        {
+            Name = _name;
+            Fingers = new List<Finger>();
+
+            for (int f = 0; f < 5; ++f)
+            {
+                Fingers.Add(new Finger());
+            }
+
+            UpperarmPrev = Vector3.down;
+        }
+    }
+
+    // -----------------------------------------------------------------------------------
+    // All information for a finger
+    // -----------------------------------------------------------------------------------
+    protected class Finger
+    {
+        public float SideRotation;
+        public float TotalRotation;
+    }
+
+
     // -- These values are determined by the user via UI
     public float ShoulderWidth;
     public Transform NeckBase;
@@ -19,6 +73,9 @@ public abstract class TrackingData : MonoBehaviour
     public Slider Height;
     public Slider Width;
     public Slider Depth;
+
+    // -- Hand data for this instance
+    protected List<Hand> hands;
 
     protected virtual void Start()
     {
@@ -76,22 +133,34 @@ public abstract class TrackingData : MonoBehaviour
     // ===================================================================================
     // How many hands are there
     // ===================================================================================
-    public abstract int HandCount();
+    public int HandCount()
+    {
+        return hands.Count;
+    }
 
     // ===================================================================================
     // A string representation of each hand
     // ===================================================================================
-    public abstract string HandName(int hand);
+    public string HandName(int hand)
+    {
+        return hands[hand].Name;
+    }
 
     // ===================================================================================
     // How many fingers are there on one hand
     // ===================================================================================
-    public abstract int FingerCount(int hand);
+    public int FingerCount(int hand)
+    {
+        return hands[hand].Fingers.Count;
+    }
 
     // ===================================================================================
     // The averaged rotation of the joints on one hand, min 0, max 1 (soft constraints)
     // ===================================================================================
-    public abstract float GetFingerRotation(int hand, int finger);
+    public float GetFingerRotation(int hand, int finger)
+    {
+        return hands[hand].Fingers[finger].TotalRotation;
+    }
 
     // ===================================================================================
     // The side to side rotation of a finger, like when you spread your fingers
@@ -99,42 +168,81 @@ public abstract class TrackingData : MonoBehaviour
     // For all fingers except thumb: min -1, max 1 (soft constraints)
     // Thumb: min -1, max 1
     // ===================================================================================
-    public abstract float GetSideToSideRotation(int hand, int finger);
+    public float GetSideToSideRotation(int hand, int finger)
+    {
+        return hands[hand].Fingers[finger].SideRotation;
+    }
 
     // ===================================================================================
     // How long the forearm is, 1 is long, 0 is short
     // ===================================================================================
-    public abstract float GetForearmExtension(int hand);
+    public float GetForearmExtension(int hand)
+    {
+        return hands[hand].ForearmExtension;
+    }
 
     // ===================================================================================
     // Rotation of the forearm from the elbow. min -180, max 180
     // ===================================================================================
-    public abstract float GetForearmRotation(int hand);
+    public float GetForearmRotation(int hand)
+    {
+        return hands[hand].ForearmRotation;
+    }
 
     // ===================================================================================
     // How long the upperarm is, 1 is long, 0 is short
     // ===================================================================================
-    public abstract float GetUpperarmExtension(int hand);
+    public float GetUpperarmExtension(int hand)
+    {
+        return hands[hand].UpperarmExtension;
+    }
 
     // ===================================================================================
     // Rotation of the arm from the shoulder. min -180, max 180
     // ===================================================================================
-    public abstract float GetUpperarmRotation(int hand);
+    public float GetUpperarmRotation(int hand)
+    {
+        return hands[hand].UpperarmRotation;
+    }
 
     // ===================================================================================
     // Euler angles of the rotation of the wrist. min -1, max 1 for each axis
     // ===================================================================================
-    public abstract Vector3 GetWristRotation(int hand);
+    public Vector3 GetWristRotation(int hand)
+    {
+        return hands[hand].WristRotation;
+    }
 
     // ===================================================================================
     // World position of wrist. min -5, max 5
     // ===================================================================================
-    public abstract Vector3 GetWristPosition(int hand);
+    public Vector3 GetWristPosition(int hand)
+    {
+        return hands[hand].WristPosition;
+    }
 
     // ===================================================================================
     // Whether a hand was found this frame
     // ===================================================================================
-    public abstract bool HandTracked(int hand);
+    public bool HandTracked(int hand)
+    {
+        return hands[hand].Found;
+    }
+
+    // ===================================================================================
+    // Average of the finger values
+    // ===================================================================================
+    public float HandOpen(int hand)
+    {
+        float sum = 0f;
+        Hand h = hands[hand];
+        foreach(Finger f in h.Fingers)
+        {
+            sum += f.TotalRotation;
+        }
+
+        return sum / h.Fingers.Count;
+    }
 
     // ===================================================================================
     // Shoulder position options
