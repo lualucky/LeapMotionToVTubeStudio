@@ -3,6 +3,7 @@ An app that sends tracking data from Leap Motion to be used in VTube Studio, all
 
 This repository is for developers who want to contribute to the development of the plugin, if you are a user you get the plugin here: https://lualucky.itch.io/leapmotion-to-vtube-studio-plugin
 
+
 This project is intended to be open source and welcomes outside collaboration and feature extension.
 
 This project is built in Unity 2019.4.16f1 and should be maintained on that version.
